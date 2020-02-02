@@ -1,0 +1,12 @@
+[package]
+authors = ["twitchyliquid64"]
+categories = ["embedded", "no-std"]
+description = "Low-level, wire-format enums/bitfields used in HID descriptors"
+keywords = ["no-std", "hid"]
+license = "MIT OR Apache-2.0"
+name = "usbd-hid-descriptors"
+version = "0.1.1"
+edition = "2018"
+
+[dependencies]
+bitfield = "~0.13"

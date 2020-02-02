@@ -1,0 +1,12 @@
+[package]
+name = "usbd-hid"
+description = "WIP: Eventually a HID class for use with usb-device."
+version = "0.3.5"
+keywords = ["hid", "no-std", "usb-device"]
+license = "MIT OR Apache-2.0"
+authors = ["twitchyliquid64"]
+edition = "2018"
+
+[dependencies]
+usbd-hid-macros = { path = "macros", version = "0.2.5" }
+usb-device = "0.2.1"
