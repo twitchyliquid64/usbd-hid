@@ -6,6 +6,8 @@ keywords = ["hid", "no-std", "usb-device"]
 license = "MIT OR Apache-2.0"
 authors = ["twitchyliquid64"]
 edition = "2018"
+repository = "https://github.com/twitchyliquid64/usbd-hid"
+
 
 [dependencies]
 usbd-hid-macros = { path = "macros", version = "0.2.5" }
