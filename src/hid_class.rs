@@ -51,6 +51,13 @@ impl<B: UsbBus> HIDClass<'_, B> {
     pub fn push_input(&self, data: &[u8]) -> Result<usize> {
         self.in_ep.write(data)
     }
+
+    /// Tries to read an output report from the host-to-device endpoint. Data
+    /// is expected to be sized appropriately to contain any valid HID report
+    /// for OUTPUT items, including the report ID prefix if report IDs are used.
+    pub fn pull_output(&self, data: &mut [u8]) -> Result<usize> {
+        self.out_ep.read(data)
+    }
 }
 
 impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
