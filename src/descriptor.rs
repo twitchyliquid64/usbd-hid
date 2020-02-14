@@ -5,15 +5,18 @@ use serde::ser::{Serialize, Serializer, SerializeTuple};
 
 pub use usbd_hid_macros::gen_hid_descriptor;
 
-/// Types where serialized HID report descriptors are available.
+/// Report types where serialized HID report descriptors are available.
 pub trait SerializedDescriptor {
     fn desc() -> &'static[u8];
 }
 
+/// Report types which serialize into input reports, ready for transmission.
+pub trait AsInputReport: Serialize {}
+
 /// Prelude for modules which use the `gen_hid_descriptor` macro.
 pub mod generator_prelude {
     pub use usbd_hid_macros::gen_hid_descriptor;
-    pub use crate::descriptor::SerializedDescriptor;
+    pub use crate::descriptor::{SerializedDescriptor, AsInputReport};
     pub use serde::ser::{Serialize, SerializeTuple, Serializer};
 }
 

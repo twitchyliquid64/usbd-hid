@@ -1,8 +1,8 @@
 //! HID report descriptor generation & USB HID class implementation
 //!
 //! This crate implements components necessary to build a USB HID device. This
-//! includes generation of the report descriptor, as well implementing communications
-//! with a host that implements USB HID.
+//! includes generation of the report descriptor, serialization of input reports,
+//! and communicating with a host that implements USB HID.
 #![no_std]
 
 

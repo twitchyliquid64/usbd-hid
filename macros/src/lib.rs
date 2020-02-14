@@ -21,7 +21,7 @@ use item::*;
 mod packer;
 use packer::{uses_report_ids, gen_serializer};
 
-/// Attribute to generate a HID descriptor
+/// Attribute to generate a HID descriptor & serialization code
 ///
 /// You are expected to provide two inputs to this generator:
 ///
@@ -41,6 +41,9 @@ use packer::{uses_report_ids, gen_serializer};
 /// If inputs and outputs are mixed within the same HID descriptor, then only the struct
 /// fields used in that direction can be present in a payload being transmitted in that
 /// direction.
+///
+/// If report ID's are not used, input (device-to-host) serialization code is generated
+/// automatically, and is represented by the implementation of the `AsInputReport` trait.
 ///
 /// # Examples
 ///
@@ -236,6 +239,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
                     #input_serializer
                 }
             }
+            impl AsInputReport for #ident {}
         };
     }
 

@@ -2,6 +2,10 @@
 use usb_device::class_prelude::*;
 use usb_device::Result;
 
+use crate::descriptor::AsInputReport;
+extern crate ssmarshal;
+use ssmarshal::serialize;
+
 const USB_CLASS_HID: u8 = 0x03;
 const USB_SUBCLASS_NONE: u8 = 0x00;
 const USB_PROTOCOL_NONE: u8 = 0x00;
@@ -44,18 +48,30 @@ impl<B: UsbBus> HIDClass<'_, B> {
         }
     }
 
-    /// Tries to write an input report. Data is expected to be a valid HID
-    /// report for INPUT items. If report ID's were used in the descriptor,
-    /// the report ID corresponding to this report must be be present before
-    /// the contents of the report.
-    pub fn push_input(&self, data: &[u8]) -> Result<usize> {
+    /// Tries to write an input report by serializing the given report structure.
+    /// A BufferOverflow error is returned if the serialized report is greater than
+    /// 64 bytes in size.
+    pub fn push_input<IR: AsInputReport>(&self, r: &IR) -> Result<usize> {
+        let mut buff: [u8; 64] = [0; 64];
+        let size = match serialize(&mut buff, r) {
+            Ok(l) => l,
+            Err(_) => return Err(UsbError::BufferOverflow),
+        };
+        self.in_ep.write(&buff[0..size])
+    }
+
+    /// Tries to write an input (device-to-host) report from the given raw bytes.
+    /// Data is expected to be a valid HID report for INPUT items. If report ID's
+    /// were used in the descriptor, the report ID corresponding to this report
+    /// must be be present before the contents of the report.
+    pub fn push_raw_input(&self, data: &[u8]) -> Result<usize> {
         self.in_ep.write(data)
     }
 
-    /// Tries to read an output report from the host-to-device endpoint. Data
+    /// Tries to read an output (host-to-device) report as raw bytes. Data
     /// is expected to be sized appropriately to contain any valid HID report
     /// for OUTPUT items, including the report ID prefix if report IDs are used.
-    pub fn pull_output(&self, data: &mut [u8]) -> Result<usize> {
+    pub fn pull_raw_output(&self, data: &mut [u8]) -> Result<usize> {
         self.out_ep.read(data)
     }
 }
