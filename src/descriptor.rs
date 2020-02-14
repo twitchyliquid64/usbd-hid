@@ -1,11 +1,20 @@
 //! Implements generation of HID report descriptors as well as common reports
 extern crate usbd_hid_macros;
+extern crate serde;
+use serde::ser::{Serialize, Serializer, SerializeTuple};
 
-pub use usbd_hid_macros::{gen_hid_descriptor};
+pub use usbd_hid_macros::gen_hid_descriptor;
 
 /// Types where serialized HID report descriptors are available.
 pub trait SerializedDescriptor {
     fn desc() -> &'static[u8];
+}
+
+/// Prelude for modules which use the `gen_hid_descriptor` macro.
+pub mod generator_prelude {
+    pub use usbd_hid_macros::gen_hid_descriptor;
+    pub use crate::descriptor::SerializedDescriptor;
+    pub use serde::ser::{Serialize, SerializeTuple, Serializer};
 }
 
 /// MouseReport describes a report and its companion descriptor than can be used

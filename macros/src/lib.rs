@@ -6,12 +6,11 @@ extern crate usbd_hid_descriptors;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{parse, parse_macro_input, ItemStruct, Field, Fields, Expr};
+use syn::{parse, parse_macro_input, ItemStruct, Fields, Expr};
 use syn::{Result, Pat, PatSlice};
 use syn::punctuated::Punctuated;
 use syn::token::Bracket;
 
-use std::string::String;
 use usbd_hid_descriptors::*;
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -19,6 +18,8 @@ mod spec;
 use spec::*;
 mod item;
 use item::*;
+mod packer;
+use packer::{uses_report_ids, gen_serializer};
 
 /// Attribute to generate a HID descriptor
 ///
@@ -198,12 +199,15 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
             .into(),
     };
 
-    let descriptor = match compile_descriptor(spec, &decl.fields){
+    let do_serialize = !uses_report_ids(&Spec::Collection(spec.clone()));
+
+    let output = match compile_descriptor(spec, &decl.fields){
         Ok(d) => d,
         Err(e) => return e.to_compile_error().into(),
     };
-    // let descriptor_len = Index::from(size);
-    let out = quote! {
+    let (descriptor, fields) = output;
+
+    let mut out = quote! {
         #[derive(Debug, Clone, Copy)]
         #[repr(C, packed)]
         #decl
@@ -214,11 +218,32 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
             }
         }
     };
+
+    if do_serialize {
+        let input_serializer = match gen_serializer(fields, MainItemKind::Input) {
+            Ok(s) => s,
+            Err(e) => return e.to_compile_error().into(),
+        };
+
+        out = quote! {
+            #out
+
+            impl Serialize for #ident {
+                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+                where
+                    S: Serializer,
+                {
+                    #input_serializer
+                }
+            }
+        };
+    }
+
     TokenStream::from(out)
 }
 
 
-fn compile_descriptor(spec: GroupSpec, fields: &Fields) -> Result<PatSlice> {
+fn compile_descriptor(spec: GroupSpec, fields: &Fields) -> Result<(PatSlice, Vec<ReportUnaryField>)> {
     let mut compiler = DescCompilation{ ..Default::default() };
     let mut elems = Punctuated::new();
 
@@ -226,25 +251,27 @@ fn compile_descriptor(spec: GroupSpec, fields: &Fields) -> Result<PatSlice> {
         return Err(e);
     };
 
-    Ok(PatSlice{
+    Ok((PatSlice{
         attrs: vec![],
         elems: elems,
         bracket_token: Bracket{span: Span::call_site()},
-    })
+    }, compiler.report_fields()))
 }
 
 #[derive(Default)]
 struct DescCompilation {
-    // usage_page: u8,
-    // usage: u8,
-    // collection: Option<u8>,
     logical_minimum: Option<isize>,
     logical_maximum: Option<isize>,
     report_size: Option<u16>,
     report_count: Option<u16>,
+    processed_fields: Vec<ReportUnaryField>,
 }
 
 impl DescCompilation {
+    fn report_fields(&self) -> Vec<ReportUnaryField> {
+        self.processed_fields.clone()
+    }
+
     fn emit(&self, elems: &mut Punctuated<Pat, syn::token::Comma>, prefix: &mut ItemPrefix, buf: [u8; 4], signed: bool) {
         // println!("buf: {:?}", buf);
         if buf[1..4] == [0,0,0] && !(signed && buf[0] == 255) {
@@ -360,7 +387,10 @@ impl DescCompilation {
                     // println!("field: {:?}", i);
                     let d = field_decl(fields, name);
                     match analyze_field(d.clone(), d.ty, i) {
-                        Ok(item) => self.emit_field(elems, i, item.descriptor_item),
+                        Ok(item) => {
+                            self.processed_fields.push(item.clone());
+                            self.emit_field(elems, i, item.descriptor_item)
+                        },
                         Err(e) => return Err(e),
                     }
                 },
@@ -395,15 +425,4 @@ fn byte_literal(lit: u8) -> Pat {
             ),
         }
     )
-}
-
-
-fn field_decl(fields: &Fields, name: String) -> Field {
-    for field in fields {
-        let ident = field.ident.clone().unwrap().to_string();
-        if ident == name {
-            return field.clone();
-        }
-    }
-    panic!(format!("internal error: could not find field {} which should exist", name))
 }

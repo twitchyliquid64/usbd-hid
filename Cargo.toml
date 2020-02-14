@@ -12,3 +12,4 @@ repository = "https://github.com/twitchyliquid64/usbd-hid"
 [dependencies]
 usbd-hid-macros = { path = "macros", version = "0.2.7" }
 usb-device = "0.2.1"
+serde = "1.0.100"

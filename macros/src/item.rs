@@ -1,6 +1,6 @@
 extern crate usbd_hid_descriptors;
 
-use syn::{parse, Field, Type, Expr, Result, Ident, ExprLit, Lit};
+use syn::{parse, Field, Fields, Type, Expr, Result, Ident, ExprLit, Lit};
 use usbd_hid_descriptors::*;
 use crate::spec::*;
 
@@ -15,7 +15,7 @@ pub struct MainItem {
     pub padding_bits: Option<u16>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReportUnaryField {
     pub bit_width: usize,
     pub descriptor_item: MainItem,
@@ -111,4 +111,14 @@ fn unsigned_unary_item(id: Ident, kind: MainItemKind, bit_width: usize) -> Repor
             padding_bits: None,
         },
     }
+}
+
+pub fn field_decl(fields: &Fields, name: String) -> Field {
+    for field in fields {
+        let ident = field.ident.clone().unwrap().to_string();
+        if ident == name {
+            return field.clone();
+        }
+    }
+    panic!(format!("internal error: could not find field {} which should exist", name))
 }

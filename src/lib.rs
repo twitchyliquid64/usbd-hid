@@ -13,8 +13,7 @@ pub mod descriptor;
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
-    use crate::descriptor::gen_hid_descriptor;
-    use crate::descriptor::SerializedDescriptor;
+    use crate::descriptor::generator_prelude::*;
     use crate::descriptor::MouseReport;
 
     // This should generate this descriptor:
