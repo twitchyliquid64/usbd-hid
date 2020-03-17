@@ -112,7 +112,7 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
     match (key_name.as_str(), path.as_str()) {
         ("collection", "PHYSICAL") => Some(0x0),
         ("collection", "APPLICATION") => Some(0x1),
-        ("collection", "LOGICAL") => Some(0x3),
+        ("collection", "LOGICAL") => Some(0x2),
         ("collection", "REPORT") => Some(0x3),
         ("collection", "NAMED_ARRAY") => Some(0x4),
         ("collection", "USAGE_SWITCH") => Some(0x5),
