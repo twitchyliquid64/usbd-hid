@@ -6,20 +6,20 @@ extern crate usbd_hid_descriptors;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{parse, parse_macro_input, ItemStruct, Fields, Expr};
-use syn::{Result, Pat, PatSlice};
 use syn::punctuated::Punctuated;
 use syn::token::Bracket;
+use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct};
+use syn::{Pat, PatSlice, Result};
 
-use usbd_hid_descriptors::*;
 use byteorder::{ByteOrder, LittleEndian};
+use usbd_hid_descriptors::*;
 
 mod spec;
 use spec::*;
 mod item;
 use item::*;
 mod packer;
-use packer::{uses_report_ids, gen_serializer};
+use packer::{gen_serializer, uses_report_ids};
 
 /// Attribute to generate a HID descriptor & serialization code
 ///
@@ -197,14 +197,19 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     // Error if the struct doesn't name its fields.
     match decl.clone().fields {
         Fields::Named(_) => (),
-        _ => return parse::Error::new(ident.span(),"`#[gen_hid_descriptor]` type must name fields")
+        _ => {
+            return parse::Error::new(
+                ident.span(),
+                "`#[gen_hid_descriptor]` type must name fields",
+            )
             .to_compile_error()
-            .into(),
+            .into()
+        }
     };
 
     let do_serialize = !uses_report_ids(&Spec::Collection(spec.clone()));
 
-    let output = match compile_descriptor(spec, &decl.fields){
+    let output = match compile_descriptor(spec, &decl.fields) {
         Ok(d) => d,
         Err(e) => return e.to_compile_error().into(),
     };
@@ -246,20 +251,29 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     TokenStream::from(out)
 }
 
-
-fn compile_descriptor(spec: GroupSpec, fields: &Fields) -> Result<(PatSlice, Vec<ReportUnaryField>)> {
-    let mut compiler = DescCompilation{ ..Default::default() };
+fn compile_descriptor(
+    spec: GroupSpec,
+    fields: &Fields,
+) -> Result<(PatSlice, Vec<ReportUnaryField>)> {
+    let mut compiler = DescCompilation {
+        ..Default::default()
+    };
     let mut elems = Punctuated::new();
 
     if let Err(e) = compiler.emit_group(&mut elems, &spec, fields) {
         return Err(e);
     };
 
-    Ok((PatSlice{
-        attrs: vec![],
-        elems: elems,
-        bracket_token: Bracket{span: Span::call_site()},
-    }, compiler.report_fields()))
+    Ok((
+        PatSlice {
+            attrs: vec![],
+            elems: elems,
+            bracket_token: Bracket {
+                span: Span::call_site(),
+            },
+        },
+        compiler.report_fields(),
+    ))
 }
 
 #[derive(Default)]
@@ -276,20 +290,24 @@ impl DescCompilation {
         self.processed_fields.clone()
     }
 
-    fn emit(&self, elems: &mut Punctuated<Pat, syn::token::Comma>, prefix: &mut ItemPrefix, buf: [u8; 4], signed: bool) {
+    fn emit(
+        &self,
+        elems: &mut Punctuated<Pat, syn::token::Comma>,
+        prefix: &mut ItemPrefix,
+        buf: [u8; 4],
+        signed: bool,
+    ) {
         // println!("buf: {:?}", buf);
-        if buf[1..4] == [0,0,0] && !(signed && buf[0] == 255) {
+        if buf[1..4] == [0, 0, 0] && !(signed && buf[0] == 255) {
             prefix.set_byte_count(1);
             elems.push(byte_literal(prefix.0));
             elems.push(byte_literal(buf[0]));
-        }
-        else if buf[2..4] == [0,0] && !(signed && buf[1] == 255) {
+        } else if buf[2..4] == [0, 0] && !(signed && buf[1] == 255) {
             prefix.set_byte_count(2);
             elems.push(byte_literal(prefix.0));
             elems.push(byte_literal(buf[0]));
             elems.push(byte_literal(buf[1]));
-        }
-        else {
+        } else {
             prefix.set_byte_count(3);
             elems.push(byte_literal(prefix.0));
             elems.push(byte_literal(buf[0]));
@@ -300,7 +318,14 @@ impl DescCompilation {
         // println!("emitted {} data bytes", prefix.byte_count());
     }
 
-    fn emit_item(&self, elems: &mut Punctuated<Pat, syn::token::Comma>, typ: u8, kind: u8, num: isize, signed: bool) {
+    fn emit_item(
+        &self,
+        elems: &mut Punctuated<Pat, syn::token::Comma>,
+        typ: u8,
+        kind: u8,
+        num: isize,
+        signed: bool,
+    ) {
         let mut prefix = ItemPrefix(0);
         prefix.set_tag(kind);
         prefix.set_type(typ);
@@ -324,64 +349,154 @@ impl DescCompilation {
     }
 
     fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: MainItem) {
-        if self.logical_minimum.is_none() || self.logical_minimum.clone().unwrap() != item.logical_minimum {
-            self.emit_item(elems, ItemType::Global.into(), GlobalItemKind::LogicalMin.into(), item.logical_minimum as isize, true);
+        if self.logical_minimum.is_none()
+            || self.logical_minimum.clone().unwrap() != item.logical_minimum
+        {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::LogicalMin.into(),
+                item.logical_minimum as isize,
+                true,
+            );
             self.logical_minimum = Some(item.logical_minimum);
         }
-        if self.logical_maximum.is_none() || self.logical_maximum.clone().unwrap() != item.logical_maximum {
-            self.emit_item(elems, ItemType::Global.into(), GlobalItemKind::LogicalMax.into(), item.logical_maximum as isize, true);
+        if self.logical_maximum.is_none()
+            || self.logical_maximum.clone().unwrap() != item.logical_maximum
+        {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::LogicalMax.into(),
+                item.logical_maximum as isize,
+                true,
+            );
             self.logical_maximum = Some(item.logical_maximum);
         }
         if self.report_size.is_none() || self.report_size.clone().unwrap() != item.report_size {
-            self.emit_item(elems, ItemType::Global.into(), GlobalItemKind::ReportSize.into(), item.report_size as isize, true);
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::ReportSize.into(),
+                item.report_size as isize,
+                true,
+            );
             self.report_size = Some(item.report_size);
         }
         if self.report_count.is_none() || self.report_count.clone().unwrap() != item.report_count {
-            self.emit_item(elems, ItemType::Global.into(), GlobalItemKind::ReportCount.into(), item.report_count as isize, true);
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::ReportCount.into(),
+                item.report_count as isize,
+                true,
+            );
             self.report_count = Some(item.report_count);
         }
     }
 
-    fn emit_field(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, i: &ItemSpec, item: MainItem) {
+    fn emit_field(
+        &mut self,
+        elems: &mut Punctuated<Pat, syn::token::Comma>,
+        i: &ItemSpec,
+        item: MainItem,
+    ) {
         self.handle_globals(elems, item.clone());
         let item_data = match &i.settings {
             Some(s) => s.0 as isize,
             None => 0x02, // 0x02 = Data,Var,Abs
         };
-        self.emit_item(elems, ItemType::Main.into(), item.kind.into(), item_data, true);
+        self.emit_item(
+            elems,
+            ItemType::Main.into(),
+            item.kind.into(),
+            item_data,
+            true,
+        );
 
         if let Some(padding) = item.padding_bits {
             // Make another item of type constant to carry the remaining bits.
-            let padding = MainItem{ report_size: 1, report_count: padding, ..item };
+            let padding = MainItem {
+                report_size: 1,
+                report_count: padding,
+                ..item
+            };
             self.handle_globals(elems, padding.clone());
 
-            let mut const_settings = MainItemSetting{ 0: 0};
+            let mut const_settings = MainItemSetting { 0: 0 };
             const_settings.set_constant(true);
             const_settings.set_variable(true);
-            self.emit_item(elems, ItemType::Main.into(), item.kind.into(), const_settings.0 as isize, true);
+            self.emit_item(
+                elems,
+                ItemType::Main.into(),
+                item.kind.into(),
+                const_settings.0 as isize,
+                true,
+            );
         }
     }
 
-    fn emit_group(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, spec: &GroupSpec, fields: &Fields) -> Result<()> {
+    fn emit_group(
+        &mut self,
+        elems: &mut Punctuated<Pat, syn::token::Comma>,
+        spec: &GroupSpec,
+        fields: &Fields,
+    ) -> Result<()> {
         // println!("GROUP: {:?}", spec);
 
         if let Some(usage_page) = spec.usage_page {
-            self.emit_item(elems, ItemType::Global.into(), GlobalItemKind::UsagePage.into(), usage_page as isize, false);
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::UsagePage.into(),
+                usage_page as isize,
+                false,
+            );
         }
-        if let Some(usage) = spec.usage {
-            self.emit_item(elems, ItemType::Local.into(), LocalItemKind::Usage.into(), usage as isize, false);
+        for usage in &spec.usage {
+            self.emit_item(
+                elems,
+                ItemType::Local.into(),
+                LocalItemKind::Usage.into(),
+                *usage as isize,
+                false,
+            );
         }
         if let Some(usage_min) = spec.usage_min {
-            self.emit_item(elems, ItemType::Local.into(), LocalItemKind::UsageMin.into(), usage_min as isize, false);
+            self.emit_item(
+                elems,
+                ItemType::Local.into(),
+                LocalItemKind::UsageMin.into(),
+                usage_min as isize,
+                false,
+            );
         }
         if let Some(usage_max) = spec.usage_max {
-            self.emit_item(elems, ItemType::Local.into(), LocalItemKind::UsageMax.into(), usage_max as isize, false);
+            self.emit_item(
+                elems,
+                ItemType::Local.into(),
+                LocalItemKind::UsageMax.into(),
+                usage_max as isize,
+                false,
+            );
         }
         if let Some(report_id) = spec.report_id {
-            self.emit_item(elems, ItemType::Global.into(), GlobalItemKind::ReportID.into(), report_id as isize, false);
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::ReportID.into(),
+                report_id as isize,
+                false,
+            );
         }
         if let Some(collection) = spec.collection {
-            self.emit_item(elems, ItemType::Main.into(), MainItemKind::Collection.into(), collection as isize, false);
+            self.emit_item(
+                elems,
+                ItemType::Main.into(),
+                MainItemKind::Collection.into(),
+                collection as isize,
+                false,
+            );
         }
 
         for name in spec.clone() {
@@ -394,39 +509,34 @@ impl DescCompilation {
                         Ok(item) => {
                             self.processed_fields.push(item.clone());
                             self.emit_field(elems, i, item.descriptor_item)
-                        },
+                        }
                         Err(e) => return Err(e),
                     }
-                },
-                Spec::Collection(g) => if let Err(e) = self.emit_group(elems, g, fields) {
-                    return Err(e);
-                },
+                }
+                Spec::Collection(g) => {
+                    if let Err(e) = self.emit_group(elems, g, fields) {
+                        return Err(e);
+                    }
+                }
             }
         }
 
-        if let Some(_) = spec.collection { // Close collection.
+        if let Some(_) = spec.collection {
+            // Close collection.
             elems.push(byte_literal(0xc0));
         }
         Ok(())
     }
 }
 
-
-
 fn byte_literal(lit: u8) -> Pat {
     // print!("{:x} ", lit);
     // println!();
-    Pat::Lit(
-        syn::PatLit{
+    Pat::Lit(syn::PatLit {
+        attrs: vec![],
+        expr: Box::new(Expr::Lit(syn::ExprLit {
             attrs: vec![],
-            expr: Box::new(
-                Expr::Lit(
-                    syn::ExprLit{
-                        attrs: vec![],
-                        lit: syn::Lit::Byte(syn::LitByte::new(lit, Span::call_site())),
-                    }
-                )
-            ),
-        }
-    )
+            lit: syn::Lit::Byte(syn::LitByte::new(lit, Span::call_site())),
+        })),
+    })
 }
