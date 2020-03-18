@@ -14,7 +14,7 @@ pub mod descriptor;
 #[allow(unused_imports)]
 mod tests {
     use crate::descriptor::generator_prelude::*;
-    use crate::descriptor::MouseReport;
+    use crate::descriptor::{ KeyboardReport, MouseReport };
 
     // This should generate this descriptor:
     // 0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
@@ -204,5 +204,42 @@ mod tests {
             127u8, 117u8, 8u8, 149u8, 1u8, 129u8, 6u8, 9u8, 49u8, 129u8, 6u8, 192u8, 192u8,
         ];
         assert_eq!(MouseReport::desc()[0..32], expected[0..32]);
+    }
+
+    #[test]
+    fn test_keyboard_descriptor() {
+        let expected = &[
+            0x05, 0x01,       // Usage Page (Generic Desktop)
+            0x09, 0x06,       // Usage (Keyboard)
+            0xa1, 0x01,       // Collection (Application)
+
+            0x05, 0x07,       // Usage Page (Key Codes)
+            0x19, 0xe0,       // Usage Minimum (224)
+            0x29, 0xe7,       // Usage Maximum (231)
+            0x15, 0x00,       // Logical Minimum (0)
+            0x25, 0x01,       // Logical Maximum (1)
+            0x75, 0x01,       // Report Size (1)
+            0x95, 0x08,       // Report count (8)
+            0x81, 0x02,       // Input (Data, Variable, Absolute)
+
+            0x05, 0x08,       // Usage Page (LEDs)
+            0x19, 0x01,       // Usage Minimum (1)
+            0x29, 0x05,       // Usage Maximum (5)
+            0x95, 0x05,       // Report Count (5)
+            0x91, 0x02,       // Output (Data, Variable, Absolute)
+            0x95, 0x03,       // Report Count (3)
+            0x91, 0x03,       // Output (Constant, Variable, Absolute)
+
+            0x05, 0x07,       // Usage Page (Key Codes)
+            0x19, 0x00,       // Usage Minimum (0)
+            0x29, 0x65,       // Usage Maximum (101)
+            0x26, 0xFF, 0x00, // Logical Maximum (255)
+            0x75, 0x08,       // Report Size (8)
+            0x95, 0x06,       // Report Count (6)
+            0x80,             // Input (Data, Array, Absolute)
+
+            0xc0,             // End Collection
+        ];
+        assert_eq!(KeyboardReport::desc()[0..51], expected[0..51]);
     }
 }
