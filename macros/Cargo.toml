@@ -5,7 +5,7 @@ description = "Internal crate: contains procedural macros for HID descriptors. U
 keywords = ["no-std", "usb-device"]
 license = "MIT OR Apache-2.0"
 name = "usbd-hid-macros"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2018"
 
 [lib]

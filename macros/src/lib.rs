@@ -183,8 +183,9 @@ use packer::{gen_serializer, uses_report_ids};
 ///   - `input` fields are sent in reports from device to host. `output` fields are sent in reports
 ///     from host to device. This matches the terminology used in the USB & HID specifications.
 ///   - `packed_bits` configures the field as a set of `num_items` booleans rather than a number.
-///     Any left over bits are automatically set as constants within the report. This is typically
-///     used to implement buttons.
+///     If the number of packed bits is less than the natural bit width of the field, the
+///     remaining most-significant bits are set as constants within the report and are not used.
+///     `packed_bits` is typically used to implement buttons.
 ///   - `item_settings` describes settings on the input/output item, as enumerated in section
 ///     6.2.2.5 of the [HID specification, version 1.11](https://www.usb.org/sites/default/files/documents/hid1_11.pdf).
 ///     By default, all items are configured as `(Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)`.
