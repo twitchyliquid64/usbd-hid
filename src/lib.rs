@@ -236,7 +236,7 @@ mod tests {
             0x26, 0xFF, 0x00, // Logical Maximum (255)
             0x75, 0x08,       // Report Size (8)
             0x95, 0x06,       // Report Count (6)
-            0x80,             // Input (Data, Array, Absolute)
+            0x81, 0x00,       // Input (Data, Array, Absolute)
 
             0xc0,             // End Collection
         ];

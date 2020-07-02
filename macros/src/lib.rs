@@ -188,6 +188,15 @@ use packer::{gen_serializer, uses_report_ids};
 ///   - `item_settings` describes settings on the input/output item, as enumerated in section
 ///     6.2.2.5 of the [HID specification, version 1.11](https://www.usb.org/sites/default/files/documents/hid1_11.pdf).
 ///     By default, all items are configured as `(Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)`.
+///
+/// ## Quirks
+///
+/// By default generated descriptors are such to maximize compatibility. To change this
+/// behaviour, you can use a `#[quirks <settings>]` attribute on the relevant input/output
+/// item.
+/// For now, the only quirk is `#[quirks allow_short]`, which allows global features to be
+/// serialized in a 1 byte form. This is disabled by default as the Windows HID parser
+/// considers it invalid.
 #[proc_macro_attribute]
 pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream {
     let decl = parse_macro_input!(input as ItemStruct);
@@ -325,6 +334,7 @@ impl DescCompilation {
         kind: u8,
         num: isize,
         signed: bool,
+        allow_short_form: bool,
     ) {
         let mut prefix = ItemPrefix(0);
         prefix.set_tag(kind);
@@ -337,7 +347,7 @@ impl DescCompilation {
         // assumed to be zero. This is functionally identical to using a item
         // tag that specifies a 4-byte data item followed by four zero bytes.
         let allow_short = typ == ItemType::Main.into() && kind == MainItemKind::Input.into();
-        if allow_short && num == 0 {
+        if allow_short_form && allow_short && num == 0 {
             prefix.set_byte_count(0);
             elems.push(byte_literal(prefix.0));
             return;
@@ -348,7 +358,7 @@ impl DescCompilation {
         self.emit(elems, &mut prefix, buf, signed);
     }
 
-    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: MainItem) {
+    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: MainItem, quirks: ItemQuirks) {
         if self.logical_minimum.is_none()
             || self.logical_minimum.clone().unwrap() != item.logical_minimum
         {
@@ -358,6 +368,7 @@ impl DescCompilation {
                 GlobalItemKind::LogicalMin.into(),
                 item.logical_minimum as isize,
                 true,
+                quirks.allow_short_form,
             );
             self.logical_minimum = Some(item.logical_minimum);
         }
@@ -370,6 +381,7 @@ impl DescCompilation {
                 GlobalItemKind::LogicalMax.into(),
                 item.logical_maximum as isize,
                 true,
+                quirks.allow_short_form,
             );
             self.logical_maximum = Some(item.logical_maximum);
         }
@@ -380,6 +392,7 @@ impl DescCompilation {
                 GlobalItemKind::ReportSize.into(),
                 item.report_size as isize,
                 true,
+                quirks.allow_short_form,
             );
             self.report_size = Some(item.report_size);
         }
@@ -390,6 +403,7 @@ impl DescCompilation {
                 GlobalItemKind::ReportCount.into(),
                 item.report_count as isize,
                 true,
+                quirks.allow_short_form,
             );
             self.report_count = Some(item.report_count);
         }
@@ -401,7 +415,7 @@ impl DescCompilation {
         i: &ItemSpec,
         item: MainItem,
     ) {
-        self.handle_globals(elems, item.clone());
+        self.handle_globals(elems, item.clone(), i.quirks);
         let item_data = match &i.settings {
             Some(s) => s.0 as isize,
             None => 0x02, // 0x02 = Data,Var,Abs
@@ -412,6 +426,7 @@ impl DescCompilation {
             item.kind.into(),
             item_data,
             true,
+            i.quirks.allow_short_form,
         );
 
         if let Some(padding) = item.padding_bits {
@@ -421,7 +436,7 @@ impl DescCompilation {
                 report_count: padding,
                 ..item
             };
-            self.handle_globals(elems, padding.clone());
+            self.handle_globals(elems, padding.clone(), i.quirks);
 
             let mut const_settings = MainItemSetting { 0: 0 };
             const_settings.set_constant(true);
@@ -432,6 +447,7 @@ impl DescCompilation {
                 item.kind.into(),
                 const_settings.0 as isize,
                 true,
+                i.quirks.allow_short_form,
             );
         }
     }
@@ -451,6 +467,7 @@ impl DescCompilation {
                 GlobalItemKind::UsagePage.into(),
                 usage_page as isize,
                 false,
+                false,
             );
         }
         for usage in &spec.usage {
@@ -459,6 +476,7 @@ impl DescCompilation {
                 ItemType::Local.into(),
                 LocalItemKind::Usage.into(),
                 *usage as isize,
+                false,
                 false,
             );
         }
@@ -469,6 +487,7 @@ impl DescCompilation {
                 LocalItemKind::UsageMin.into(),
                 usage_min as isize,
                 false,
+                false,
             );
         }
         if let Some(usage_max) = spec.usage_max {
@@ -477,6 +496,7 @@ impl DescCompilation {
                 ItemType::Local.into(),
                 LocalItemKind::UsageMax.into(),
                 usage_max as isize,
+                false,
                 false,
             );
         }
@@ -487,6 +507,7 @@ impl DescCompilation {
                 GlobalItemKind::ReportID.into(),
                 report_id as isize,
                 false,
+                false,
             );
         }
         if let Some(collection) = spec.collection {
@@ -495,6 +516,7 @@ impl DescCompilation {
                 ItemType::Main.into(),
                 MainItemKind::Collection.into(),
                 collection as isize,
+                false,
                 false,
             );
         }

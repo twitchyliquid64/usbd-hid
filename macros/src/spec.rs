@@ -17,10 +17,18 @@ pub enum Spec {
     Collection(GroupSpec),
 }
 
+// ItemQuirks describes minor settings which can be tweaked for
+// compatibility.
+#[derive(Debug, Clone, Default, Copy)]
+pub struct ItemQuirks {
+    pub allow_short_form: bool,
+}
+
 // ItemSpec describes settings that apply to a single field.
 #[derive(Debug, Clone, Default)]
 pub struct ItemSpec {
     pub kind: MainItemKind,
+    pub quirks: ItemQuirks,
     pub settings: Option<MainItemSetting>,
     pub want_bits: Option<u16>,
 }
@@ -50,6 +58,7 @@ impl GroupSpec {
         item_kind: MainItemKind,
         settings: Option<MainItemSetting>,
         bits: Option<u16>,
+        quirks: ItemQuirks,
     ) {
         if let Some(field) = self.fields.get_mut(&name) {
             if let Spec::MainItem(field) = field {
@@ -64,6 +73,7 @@ impl GroupSpec {
                     kind: item_kind,
                     settings: settings,
                     want_bits: bits,
+                    quirks: quirks,
                     ..Default::default()
                 }),
             );
@@ -307,10 +317,11 @@ fn maybe_parse_kv_lhs(field: Expr) -> Option<Vec<String>> {
     return None;
 }
 
-fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Option<u16>) {
+fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Option<u16>, ItemQuirks) {
     let mut out: MainItemSetting = MainItemSetting { 0: 0 };
     let mut had_settings: bool = false;
     let mut packed_bits: Option<u16> = None;
+    let mut quirks: ItemQuirks = ItemQuirks{ ..Default::default() };
 
     for attr in attrs {
         match attr.path.segments[0].ident.to_string().as_str() {
@@ -326,7 +337,7 @@ fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Opt
                 if packed_bits.is_none() {
                     println!("WARNING!: bitfield attribute specified but failed to read number of bits from token!");
                 }
-            }
+            },
 
             "item_settings" => {
                 had_settings = true;
@@ -360,7 +371,19 @@ fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Opt
                         }
                     }
                 }
-            }
+            },
+
+            "quirks" => {
+                for setting in attr.tokens {
+                    if let proc_macro2::TokenTree::Ident(id) = setting {
+                        match id.to_string().as_str() {
+                            "allow_short" => quirks.allow_short_form = true,
+                            p => println!("WARNING: Unknown item_settings parameter: {}", p),
+                        }
+                    }
+                }
+            },
+
             p => {
                 println!("WARNING: Unknown item attribute: {}", p);
             }
@@ -368,13 +391,13 @@ fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Opt
     }
 
     if had_settings {
-        return (Some(out), packed_bits);
+        return (Some(out), packed_bits, quirks);
     }
-    (None, packed_bits)
+    (None, packed_bits, quirks)
 }
 
 // maybe_parse_kv tries to parse an expression like 'blah=blah'.
-fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting>, Option<u16>)> {
+fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting>, Option<u16>, ItemQuirks)> {
     // Match out the identifier on the left of the equals.
     let name: String;
     if let Some(lhs) = maybe_parse_kv_lhs(field.clone()) {
@@ -390,7 +413,7 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
     let item_settings = if let Expr::Assign(ExprAssign { attrs, .. }) = field.clone() {
         parse_item_attrs(attrs)
     } else {
-        (None, None)
+        (None, None, ItemQuirks::default())
     };
 
     // Match out the item kind on the right of the equals.
@@ -408,7 +431,7 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
         return None;
     }
 
-    Some((name, val.unwrap(), item_settings.0, item_settings.1))
+    Some((name, val.unwrap(), item_settings.0, item_settings.1, item_settings.2))
 }
 
 impl Parse for GroupSpec {
@@ -435,8 +458,8 @@ impl Parse for GroupSpec {
 impl GroupSpec {
     fn from_field(&mut self, input: ParseStream, field: Expr) -> Result<()> {
         if let Some(i) = maybe_parse_kv(field.clone()) {
-            let (name, item_kind, settings, bits) = i;
-            self.set_item(name, item_kind.into(), settings, bits);
+            let (name, item_kind, settings, bits, quirks) = i;
+            self.set_item(name, item_kind.into(), settings, bits, quirks);
             return Ok(());
         };
         match parse_group_spec(input, field.clone()) {
