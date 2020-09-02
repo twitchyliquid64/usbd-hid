@@ -205,6 +205,14 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage", "CHARACTER_REPORT") => Some(0x2B),
         ("usage", "CHARACTER_DATA") => Some(0x2C),
 
+        // Consumer usage
+        ("usage", "CONSUMER_CONTROL") => Some(0x01),
+        ("usage", "NUMERIC_KEYPAD") => Some(0x02),
+        ("usage", "PROGRAMMABLE_BUTTONS") => Some(0x03),
+        ("usage", "MICROPHONE") => Some(0x04),
+        ("usage", "HEADPHONE") => Some(0x05),
+        ("usage", "GRAPHIC_EQUALIZER") => Some(0x06),
+
         (_, _) => None,
     }
 }
