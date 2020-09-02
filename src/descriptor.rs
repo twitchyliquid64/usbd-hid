@@ -60,6 +60,9 @@ pub struct MouseReport {
         (usage_page = KEYBOARD, usage_min = 0x00, usage_max = 0x65) = {
             #[item_settings data,array,absolute] keycodes=input;
         };
+        (usage_page = CONSUMER, usage_min = 0x0, usage_max = 0x23C) = {
+            #[item_settings data,array,absolute,not_null] mediakey=input;
+        };
     }
 )]
 #[allow(dead_code)]
@@ -67,4 +70,5 @@ pub struct KeyboardReport {
     pub modifier: u8,
     pub leds: u8,
     pub keycodes: [u8; 6],
+    pub mediakey: u16,
 }
