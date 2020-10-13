@@ -68,3 +68,48 @@ pub struct KeyboardReport {
     pub leds: u8,
     pub keycodes: [u8; 6],
 }
+
+/// MediaKeyboardReport describes a report and descriptor that can be used to
+/// send consumer control commands to the host.
+///
+/// This is commonly used for sending media player for keyboards with media player
+/// keys, but can be used for all sorts of Consumer Page functionality.
+///
+/// Reference: https://usb.org/sites/default/files/hut1_2.pdf
+///
+#[gen_hid_descriptor(
+    (collection = APPLICATION, usage_page = CONSUMER, usage = CONSUMER_CONTROL) = {
+        (usage_page = CONSUMER, usage_min = 0x00, usage_max = 0x514) = {
+            #[item_settings data,array,absolute,not_null] usage_id=input;
+        };
+    }
+)]
+#[allow(dead_code)]
+pub struct MediaKeyboardReport {
+    pub usage_id: u16,
+}
+
+/// Media player usage ids that can be used in MediaKeyboardReport
+#[non_exhaustive]
+#[repr(u16)]
+#[derive(Debug)]
+pub enum MediaKey {
+    Zero = 0x00,
+    Play = 0xB0,
+    Pause = 0xB1,
+    Record = 0xB2,
+    NextTrack =0xB5,
+    PrevTrack = 0xB6,
+    Stop = 0xB7,
+    RandomPlay = 0xB9,
+    Repeat = 0xBC,
+    PlayPause = 0xCD,
+    VolumeIncrement = 0xE9,
+    VolumeDecrement = 0xEA,
+}
+
+impl Into<u16> for MediaKey {
+    fn into(self) -> u16 {
+        self as u16
+    }
+}
