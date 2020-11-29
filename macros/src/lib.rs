@@ -526,7 +526,6 @@ impl DescCompilation {
             let f = spec.get(name.clone()).unwrap();
             match f {
                 Spec::MainItem(i) => {
-                    // println!("field: {:?}", i);
                     let d = field_decl(fields, name);
                     match analyze_field(d.clone(), d.ty, i) {
                         Ok(item) => {
