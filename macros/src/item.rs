@@ -1,6 +1,6 @@
 extern crate usbd_hid_descriptors;
 
-use syn::{parse, Field, Fields, Type, Expr, Result, Ident, ExprLit, Lit};
+use syn::{parse, Field, Fields, Type, Expr, Result, Ident, ExprLit, Lit, TypePath};
 use usbd_hid_descriptors::*;
 use crate::spec::*;
 
@@ -24,10 +24,62 @@ pub struct ReportUnaryField {
 
 /// analyze_field constructs a main item from an item spec & field.
 pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUnaryField> {
+    let (p, size) = parse_type(&field, ft)?;
 
-    let mut size: usize = 0;
-    let p = match ft {
+    if p.path.segments.len() != 1 {
+        return Err(
+            parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` internal error when unwrapping type")
+        );
+    }
+    let type_ident = p.path.segments[0].ident.clone();
+
+    let type_str = type_ident.to_string();
+    let (sign, size_str) = type_str.as_str().split_at(1);
+    let container_size = size_str.parse();
+    let type_constructor: Option<fn(Ident, MainItemKind, usize) -> ReportUnaryField> = match sign {
+        "u" => Some(unsigned_unary_item),
+        "i" => Some(signed_unary_item),
+        &_ => None
+    };
+
+    if container_size.is_err() || type_constructor.is_none() {
+        return Err(
+            parse::Error::new(type_ident.span(), "`#[gen_hid_descriptor]` type not supported")
+        )
+    }
+    let container_size = container_size.unwrap();
+    // FIXME: panic on logical max/max calc on large types.
+    let mut output = type_constructor.unwrap()(field.ident.clone().unwrap(), item.kind, container_size);
+
+    if let Some(want_bits) = item.want_bits {  // bitpack
+        output.descriptor_item.logical_minimum = 0;
+        output.descriptor_item.logical_maximum = 1;
+        output.descriptor_item.report_count = want_bits;
+        output.descriptor_item.report_size = 1;
+        let width = output.bit_width * size;
+        if width < want_bits as usize {
+            return Err(
+                parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` bit_width < want_bits")
+            )
+        }
+        let remaining_bits = width as u16 - want_bits;
+        if remaining_bits > 0 {
+            output.descriptor_item.padding_bits = Some(remaining_bits);
+        }
+    } else { // array of reports
+        // output.descriptor_item.logical_minimum = 0;
+        // output.descriptor_item.logical_maximum = 1;
+    }
+
+    output.descriptor_item.report_count *= size as u16;
+    Ok(output)
+}
+
+fn parse_type(field: &Field, ft: Type) -> Result<(TypePath, usize)> {
+    match ft {
         Type::Array(a) => {
+            let mut size: usize = 0;
+
             if let Expr::Lit(ExprLit { lit, .. }) = a.len {
                 if let Lit::Int(lit) = lit {
                     if let Ok(num) = lit.base10_parse::<usize>() {
@@ -36,77 +88,21 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
                 }
             }
             if size == 0 {
-                return Err(
-                    parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` array has invalid length")
-                );
-            }
-            if let Type::Path(p) = *a.elem {
-                Some(p)
+                Err(
+                    parse::Error::new(field.ident.as_ref().unwrap().span(), "`#[gen_hid_descriptor]` array has invalid length")
+                )
             } else {
-                None
+                Ok((parse_type(&field, *a.elem)?.0, size))
             }
         }
         Type::Path(p) => {
-            size = 1;
-            Some(p)
+            Ok((p, 1))
         }
         _ => {
-            None
-        }
-    };
-
-    if let Some(p) = p {
-        if p.path.segments.len() != 1 {
-            return Err(
-                parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` internal error when unwrapping type")
-            );
-        }
-        let type_ident = p.path.segments[0].ident.clone();
-
-        let type_str = type_ident.to_string();
-        let (sign, size_str) = type_str.as_str().split_at(1);
-        let container_size = size_str.parse();
-        let type_constructor: Option<fn(Ident, MainItemKind, usize) -> ReportUnaryField> = match sign {
-            "u" => Some(unsigned_unary_item),
-            "i" => Some(signed_unary_item),
-            &_ => None
-        };
-
-        if container_size.is_err() || type_constructor.is_none() {
-            return Err(
-                parse::Error::new(type_ident.span(), "`#[gen_hid_descriptor]` type not supported")
+            Err(
+                parse::Error::new(field.ident.as_ref().unwrap().span(),"`#[gen_hid_descriptor]` cannot handle field type")
             )
         }
-        let container_size = container_size.unwrap();
-        // FIXME: panic on logical max/max calc on large types.
-        let mut output = type_constructor.unwrap()(field.ident.clone().unwrap(), item.kind, container_size);
-
-        if let Some(want_bits) = item.want_bits {  // bitpack
-            output.descriptor_item.logical_minimum = 0;
-            output.descriptor_item.logical_maximum = 1;
-            output.descriptor_item.report_count = want_bits;
-            output.descriptor_item.report_size = 1;
-            let width = output.bit_width * size;
-            if width < want_bits as usize {
-                return Err(
-                    parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` bit_width < want_bits")
-                )
-            }
-            let remaining_bits = width as u16 - want_bits;
-            if remaining_bits > 0 {
-                output.descriptor_item.padding_bits = Some(remaining_bits);
-            }
-        } else { // array of reports
-            // output.descriptor_item.logical_minimum = 0;
-            // output.descriptor_item.logical_maximum = 1;
-        }
-
-        output.descriptor_item.report_count *= size as u16;
-        Ok(output)
-    } else {
-        Err(
-            parse::Error::new(field.ident.unwrap().span(),"`#[gen_hid_descriptor]` cannot handle field type")
-        )
     }
 }
 
