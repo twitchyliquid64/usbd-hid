@@ -35,21 +35,20 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
 
     let type_str = type_ident.to_string();
     let (sign, size_str) = type_str.as_str().split_at(1);
-    let container_size = size_str.parse();
-    let type_constructor: Option<fn(Ident, MainItemKind, usize) -> ReportUnaryField> = match sign {
-        "u" => Some(unsigned_unary_item),
-        "i" => Some(signed_unary_item),
+    let bit_width = size_str.parse();
+    let type_setter: Option<fn(&mut ReportUnaryField, usize)> = match sign {
+        "u" => Some(set_unsigned_unary_item),
+        "i" => Some(set_signed_unary_item),
         &_ => None
     };
 
-    if container_size.is_err() || type_constructor.is_none() {
+    if bit_width.is_err() || type_setter.is_none() {
         return Err(
             parse::Error::new(type_ident.span(), "`#[gen_hid_descriptor]` type not supported")
         )
     }
-    let container_size = container_size.unwrap();
-    // FIXME: panic on logical max/max calc on large types.
-    let mut output = type_constructor.unwrap()(field.ident.clone().unwrap(), item.kind, container_size);
+    let bit_width = bit_width.unwrap();
+    let mut output = unary_item(field.ident.clone().unwrap(), item.kind, bit_width);
 
     if let Some(want_bits) = item.want_bits {  // bitpack
         output.descriptor_item.logical_minimum = 0;
@@ -59,7 +58,7 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
         let width = output.bit_width * size;
         if width < want_bits as usize {
             return Err(
-                parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` bit_width < want_bits")
+                parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` not enough space")
             )
         }
         let remaining_bits = width as u16 - want_bits;
@@ -67,11 +66,10 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
             output.descriptor_item.padding_bits = Some(remaining_bits);
         }
     } else { // array of reports
-        // output.descriptor_item.logical_minimum = 0;
-        // output.descriptor_item.logical_maximum = 1;
+        type_setter.unwrap()(&mut output, bit_width);
+        output.descriptor_item.report_count *= size as u16;
     }
 
-    output.descriptor_item.report_count *= size as u16;
     Ok(output)
 }
 
@@ -106,30 +104,25 @@ fn parse_type(field: &Field, ft: Type) -> Result<(TypePath, usize)> {
     }
 }
 
-fn signed_unary_item(id: Ident, kind: MainItemKind, bit_width: usize) -> ReportUnaryField {
+fn set_signed_unary_item(out: &mut ReportUnaryField, bit_width: usize) {
     let bound = 2u32.pow((bit_width-1) as u32) as isize - 1;
-    ReportUnaryField{
-        ident: id,
-        bit_width,
-        descriptor_item: MainItem{
-            kind,
-            logical_minimum: -bound,
-            logical_maximum: bound,
-            report_count: 1,
-            report_size: bit_width as u16,
-            padding_bits: None,
-        },
-    }
+    out.descriptor_item.logical_minimum = -bound;
+    out.descriptor_item.logical_maximum = bound;
 }
 
-fn unsigned_unary_item(id: Ident, kind: MainItemKind, bit_width: usize) -> ReportUnaryField {
+fn set_unsigned_unary_item(out: &mut ReportUnaryField, bit_width: usize) {
+    out.descriptor_item.logical_minimum = 0;
+    out.descriptor_item.logical_maximum = 2u32.pow(bit_width as u32) as isize - 1;
+}
+
+fn unary_item(id: Ident, kind: MainItemKind, bit_width: usize) -> ReportUnaryField {
     ReportUnaryField{
         ident: id,
         bit_width,
         descriptor_item: MainItem{
             kind,
             logical_minimum: 0,
-            logical_maximum: 2u32.pow(bit_width as u32) as isize - 1,
+            logical_maximum: 0,
             report_count: 1,
             report_size: bit_width as u16,
             padding_bits: None,
