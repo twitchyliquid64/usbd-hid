@@ -58,7 +58,7 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
         let width = output.bit_width * size;
         if width < want_bits as usize {
             return Err(
-                parse::Error::new(field.ident.unwrap().span(), "`#[gen_hid_descriptor]` not enough space")
+                parse::Error::new(field.ident.unwrap().span(), format!("`#[gen_hid_descriptor]` not enough space, missing {} bit(s)", want_bits as usize - width))
             )
         }
         let remaining_bits = width as u16 - want_bits;
