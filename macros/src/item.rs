@@ -48,6 +48,13 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
         )
     }
     let bit_width = bit_width.unwrap();
+
+    if bit_width >= 64 {
+        return Err(
+            parse::Error::new(type_ident.span(), "`#[gen_hid_descriptor]` integer larger than 64 is not supported in ssmarshal")
+        )
+    }
+
     let mut output = unary_item(field.ident.clone().unwrap(), item.kind, bit_width);
 
     if let Some(want_bits) = item.want_bits {  // bitpack
