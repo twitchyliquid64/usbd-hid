@@ -8,9 +8,11 @@ authors = ["twitchyliquid64"]
 edition = "2018"
 repository = "https://github.com/twitchyliquid64/usbd-hid"
 
-
 [dependencies]
 usbd-hid-macros = { path = "macros", version = "0.4.5" }
 usb-device = "0.2.1"
 serde = { version = "1.0", default-features = false }
 ssmarshal = { version = "1.0", default-features = false }
+
+[features]
+default = ["serde/derive"]

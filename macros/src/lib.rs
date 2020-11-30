@@ -4,7 +4,7 @@ extern crate proc_macro;
 extern crate usbd_hid_descriptors;
 
 use proc_macro::TokenStream;
-use proc_macro2::Span;
+use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Bracket;
@@ -19,7 +19,11 @@ use spec::*;
 mod item;
 use item::*;
 mod packer;
-use packer::{gen_serializer, uses_report_ids};
+mod split;
+
+use crate::split::{filter_struct_fields, wrap_struct};
+use packer::uses_report_ids;
+use usbd_hid_descriptors::MainItemKind::{Input, Output};
 
 /// Attribute to generate a HID descriptor & serialization code
 ///
@@ -225,10 +229,35 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     };
     let (descriptor, fields) = output;
 
+    let in_struct = match filter_struct_fields(&decl, &fields, Input) {
+        Ok(d) => d
+            .map(wrap_struct)
+            .unwrap_or(proc_macro2::TokenStream::new()),
+        Err(e) => return e.to_compile_error().into(),
+    };
+
+    let out_struct = match filter_struct_fields(&decl, &fields, Output) {
+        Ok(d) => d
+            .map(|mut f| {
+                let orig = ident.to_string();
+                let ident = if in_struct.is_empty() {
+                    format!("{}", orig)
+                } else {
+                    format!("{}Out", orig)
+                };
+                f.ident = Ident::new(ident.as_str(), Span::call_site());
+                f
+            })
+            .map(wrap_struct)
+            .unwrap_or(proc_macro2::TokenStream::new()),
+        Err(e) => return e.to_compile_error().into(),
+    };
+
+
     let mut out = quote! {
-        #[derive(Debug, Clone, Copy)]
-        #[repr(C, packed)]
-        #decl
+        #in_struct
+
+        #out_struct
 
         impl SerializedDescriptor for #ident {
             fn desc() -> &'static[u8] {
@@ -236,24 +265,10 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
             }
         }
     };
-
     if do_serialize {
-        let input_serializer = match gen_serializer(fields, MainItemKind::Input) {
-            Ok(s) => s,
-            Err(e) => return e.to_compile_error().into(),
-        };
-
         out = quote! {
             #out
 
-            impl Serialize for #ident {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    #input_serializer
-                }
-            }
             impl AsInputReport for #ident {}
         };
     }

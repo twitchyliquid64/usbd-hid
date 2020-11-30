@@ -1,9 +1,4 @@
 //! Implements generation of HID report descriptors as well as common reports
-extern crate usbd_hid_macros;
-extern crate serde;
-use serde::ser::{Serialize, Serializer, SerializeTuple};
-
-pub use usbd_hid_macros::gen_hid_descriptor;
 
 /// Report types where serialized HID report descriptors are available.
 pub trait SerializedDescriptor {
@@ -11,14 +6,16 @@ pub trait SerializedDescriptor {
 }
 
 /// Report types which serialize into input reports, ready for transmission.
-pub trait AsInputReport: Serialize {}
+pub trait AsInputReport: serde::ser::Serialize {}
 
 /// Prelude for modules which use the `gen_hid_descriptor` macro.
 pub mod generator_prelude {
     pub use usbd_hid_macros::gen_hid_descriptor;
     pub use crate::descriptor::{SerializedDescriptor, AsInputReport};
-    pub use serde::ser::{Serialize, SerializeTuple, Serializer};
+    pub use serde::{Serialize, Deserialize};
 }
+
+use generator_prelude::*;
 
 /// MouseReport describes a report and its companion descriptor than can be used
 /// to send mouse movements and button presses to a host.
