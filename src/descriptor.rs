@@ -19,7 +19,7 @@ pub struct UnsupportedDescriptor;
 /// included e.g. `serde = { version = "~1.0", default-features = false }`
 pub mod generator_prelude {
     pub use usbd_hid_macros::gen_hid_descriptor;
-    pub use crate::descriptor::{HIDDescriptorTypes, UnsupportedDescriptor};
+    pub use crate::descriptor::{HIDDescriptor, HIDDescriptorTypes, UnsupportedDescriptor};
     pub use serde::{Serialize, Deserialize};
 }
 
