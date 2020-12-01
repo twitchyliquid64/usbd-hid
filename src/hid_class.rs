@@ -2,9 +2,11 @@
 use usb_device::class_prelude::*;
 use usb_device::Result;
 
-use crate::descriptor::AsInputReport;
-extern crate ssmarshal;
-use ssmarshal::serialize;
+use ssmarshal::{serialize, deserialize};
+use core::marker::PhantomData;
+use serde::{Serialize};
+use serde::de::DeserializeOwned;
+use crate::descriptor::HIDDescriptor;
 
 const USB_CLASS_HID: u8 = 0x03;
 const USB_SUBCLASS_NONE: u8 = 0x00;
@@ -25,39 +27,27 @@ const HID_REQ_SET_REPORT: u8 = 0x09;
 ///
 /// Users are expected to provide the report descriptor, as well as pack
 /// and unpack reports which are read or staged for transmission.
-pub struct HIDClass<'a, B: UsbBus> {
+pub struct HIDClass<'a, B: UsbBus, T: HIDDescriptor> {
     if_num: InterfaceNumber,
     out_ep: EndpointOut<'a, B>,
     in_ep: EndpointIn<'a, B>,
-    report_descriptor: &'static [u8],
+    desc_type: PhantomData<T>,
 }
 
-impl<B: UsbBus> HIDClass<'_, B> {
+impl<'a, B: UsbBus, T: HIDDescriptor> HIDClass<'a, B, T> {
     /// Creates a new HIDClass with the provided UsbBus & HID report descriptor.
     ///
     /// poll_ms configures how frequently the host should poll for reading/writing
     /// HID reports. A lower value means better throughput & latency, at the expense
     /// of CPU on the device & bandwidth on the bus. A value of 10 is reasonable for
     /// high performance uses, and a value of 255 is good for best-effort usecases.
-    pub fn new<'a>(alloc: &'a UsbBusAllocator<B>, report_descriptor: &'static [u8], poll_ms: u8) -> HIDClass<'a, B> {
-        HIDClass {
+    pub fn new(alloc: &'a UsbBusAllocator<B>, poll_ms: u8) -> Self {
+        Self {
             if_num: alloc.interface(),
             out_ep: alloc.interrupt(64, poll_ms),
             in_ep: alloc.interrupt(64, poll_ms),
-            report_descriptor: report_descriptor,
+            desc_type: Default::default(),
         }
-    }
-
-    /// Tries to write an input report by serializing the given report structure.
-    /// A BufferOverflow error is returned if the serialized report is greater than
-    /// 64 bytes in size.
-    pub fn push_input<IR: AsInputReport>(&self, r: &IR) -> Result<usize> {
-        let mut buff: [u8; 64] = [0; 64];
-        let size = match serialize(&mut buff, r) {
-            Ok(l) => l,
-            Err(_) => return Err(UsbError::BufferOverflow),
-        };
-        self.in_ep.write(&buff[0..size])
     }
 
     /// Tries to write an input (device-to-host) report from the given raw bytes.
@@ -76,7 +66,38 @@ impl<B: UsbBus> HIDClass<'_, B> {
     }
 }
 
-impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
+impl <B: UsbBus, T, I: Serialize> HIDClass<'_, B, T> where T: HIDDescriptor<DeviceToHostReport = I>{
+
+    /// Tries to write an input report by serializing the given report structure.
+    /// A BufferOverflow error is returned if the serialized report is greater than
+    /// 64 bytes in size.
+    pub fn push_input(&self, r: &I) -> Result<usize> {
+        let mut buff: [u8; 64] = [0; 64];
+        let size = match serialize(&mut buff, r) {
+            Ok(l) => l,
+            Err(_) => return Err(UsbError::BufferOverflow),
+        };
+        self.push_raw_input(&buff[0..size])
+    }
+}
+
+impl <'sr, B: UsbBus, T, O: DeserializeOwned> HIDClass<'_, B, T> where T: HIDDescriptor<HostToDeviceReport = O> {
+
+    /// Tries to read an output report by deserializing the incoming bytes.
+    /// - A BufferOverflow error is returned if the report sent by the host
+    ///   is greater than 64 bytes in size.
+    /// - A ParseError is returned if the deserialization process fails.
+    pub fn pull_output(&self) -> Result<(O, usize)> {
+        let mut buff: [u8; 64] = [0; 64];
+        self.pull_raw_output(&mut buff)?;
+        match deserialize::<O>(&buff) {
+            Ok(l) => Ok(l),
+            Err(_) => return Err(UsbError::ParseError),
+        }
+    }
+}
+
+impl<B: UsbBus, T: HIDDescriptor> UsbClass<B> for HIDClass<'_, B, T> {
     fn get_configuration_descriptors(&self, writer: &mut DescriptorWriter) -> Result<()> {
         writer.interface(
             self.if_num,
@@ -97,7 +118,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                 // We have a HID report descriptor the host should read
                 HID_DESC_DESCTYPE_HID_REPORT,
                 // HID report descriptor size,
-                (self.report_descriptor.len() & 0xFF) as u8, (self.report_descriptor.len()>>8 & 0xFF) as u8,
+                (T::desc().len() & 0xFF) as u8, (T::desc().len()>>8 & 0xFF) as u8,
             ])?;
 
         writer.endpoint(&self.out_ep)?;
@@ -118,7 +139,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
             (control::RequestType::Standard, control::Request::GET_DESCRIPTOR) => {
                 match (req.value>>8) as u8 {
                     HID_DESC_DESCTYPE_HID_REPORT => {
-                        xfer.accept_with_static(self.report_descriptor).ok();
+                        xfer.accept_with_static(T::desc()).ok();
                     },
                     HID_DESC_DESCTYPE_HID => {
                         let buf = &[
@@ -135,7 +156,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                             // We have a HID report descriptor the host should read
                             HID_DESC_DESCTYPE_HID_REPORT,
                             // HID report descriptor size,
-                            (self.report_descriptor.len() & 0xFF) as u8, (self.report_descriptor.len()>>8 & 0xFF) as u8,
+                            (T::desc().len() & 0xFF) as u8, (T::desc().len()>>8 & 0xFF) as u8,
                         ];
                         xfer.accept_with(buf).ok();
                     },

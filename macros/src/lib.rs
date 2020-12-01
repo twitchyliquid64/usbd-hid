@@ -236,16 +236,19 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         Err(e) => return e.to_compile_error().into(),
     };
 
+    let out_ident = {
+        let orig = ident.to_string();
+        if in_struct.is_empty() {
+            format!("{}", orig)
+        } else {
+            format!("{}Out", orig)
+        }
+    };
+
     let out_struct = match filter_struct_fields(&decl, &fields, Output) {
         Ok(d) => d
             .map(|mut f| {
-                let orig = ident.to_string();
-                let ident = if in_struct.is_empty() {
-                    format!("{}", orig)
-                } else {
-                    format!("{}Out", orig)
-                };
-                f.ident = Ident::new(ident.as_str(), Span::call_site());
+                f.ident = Ident::new(out_ident.as_str(), Span::call_site());
                 f
             })
             .map(wrap_struct)
@@ -253,27 +256,42 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         Err(e) => return e.to_compile_error().into(),
     };
 
+    let dev_to_host_type: syn::Type = {
+        let orig = ident.to_string();
+        let in_type_str  = if !do_serialize || in_struct.is_empty() {
+            EMPTY_TYPE
+        } else {
+            orig.as_str()
+        };
+        syn::parse_str(in_type_str).unwrap()
+    };
 
-    let mut out = quote! {
-        #in_struct
+    let host_to_dev_type: syn::Type = {
+        let out_type_str = if !do_serialize || out_struct.is_empty(){
+            EMPTY_TYPE
+        } else {
+            out_ident.as_str()
+        };
 
-        #out_struct
+        syn::parse_str(out_type_str).unwrap()
+    };
 
-        impl SerializedDescriptor for #ident {
-            fn desc() -> &'static[u8] {
-                &#descriptor
+    TokenStream::from(
+        quote! {
+            #in_struct
+
+            #out_struct
+
+            impl HIDDescriptor for #ident {
+                type DeviceToHostReport = #dev_to_host_type;
+                type HostToDeviceReport = #host_to_dev_type;
+
+                fn desc() -> &'static[u8] {
+                    &#descriptor
+                }
             }
         }
-    };
-    if do_serialize {
-        out = quote! {
-            #out
-
-            impl AsInputReport for #ident {}
-        };
-    }
-
-    TokenStream::from(out)
+    )
 }
 
 fn compile_descriptor(
@@ -577,3 +595,6 @@ fn byte_literal(lit: u8) -> Pat {
         })),
     })
 }
+
+// TODO: Change `!` to never_type is in stable
+static EMPTY_TYPE: &str = "UnsupportedDescriptor";

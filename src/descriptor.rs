@@ -1,17 +1,22 @@
 //! Implements generation of HID report descriptors as well as common reports
 
 /// Report types where serialized HID report descriptors are available.
-pub trait SerializedDescriptor {
-    fn desc() -> &'static[u8];
+pub trait HIDDescriptor {
+    type DeviceToHostReport;
+    type HostToDeviceReport;
+
+    fn desc() -> &'static [u8];
 }
 
-/// Report types which serialize into input reports, ready for transmission.
-pub trait AsInputReport: serde::ser::Serialize {}
+/// Placeholder Type that is nither serializable nor deserializable
+pub struct UnsupportedDescriptor;
 
 /// Prelude for modules which use the `gen_hid_descriptor` macro.
+/// To use managed serialize/deserialize features, crate `serde` must be
+/// included e.g. `serde = { version = "~1.0", default-features = false }`
 pub mod generator_prelude {
     pub use usbd_hid_macros::gen_hid_descriptor;
-    pub use crate::descriptor::{SerializedDescriptor, AsInputReport};
+    pub use crate::descriptor::{HIDDescriptor, UnsupportedDescriptor};
     pub use serde::{Serialize, Deserialize};
 }
 
