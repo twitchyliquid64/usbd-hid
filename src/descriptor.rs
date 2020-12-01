@@ -2,10 +2,13 @@
 
 /// Report types where serialized HID report descriptors are available.
 pub trait HIDDescriptor {
+    fn desc() -> &'static [u8];
+}
+
+/// Report types where serializable or deserializable in/out types are available.
+pub trait HIDDescriptorTypes: HIDDescriptor {
     type DeviceToHostReport;
     type HostToDeviceReport;
-
-    fn desc() -> &'static [u8];
 }
 
 /// Placeholder Type that is nither serializable nor deserializable
@@ -16,7 +19,7 @@ pub struct UnsupportedDescriptor;
 /// included e.g. `serde = { version = "~1.0", default-features = false }`
 pub mod generator_prelude {
     pub use usbd_hid_macros::gen_hid_descriptor;
-    pub use crate::descriptor::{HIDDescriptor, UnsupportedDescriptor};
+    pub use crate::descriptor::{HIDDescriptorTypes, UnsupportedDescriptor};
     pub use serde::{Serialize, Deserialize};
 }
 

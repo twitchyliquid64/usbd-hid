@@ -4,11 +4,11 @@ extern crate proc_macro;
 extern crate usbd_hid_descriptors;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span};
+use proc_macro2::{Span, TokenStream as TokStream2};
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Bracket;
-use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct, parse_str};
+use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct, parse_str, Type};
 use syn::{Pat, PatSlice, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -232,7 +232,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     let in_struct = match filter_struct_fields(&decl, &fields, Input) {
         Ok(d) => d
             .map(wrap_struct)
-            .unwrap_or(proc_macro2::TokenStream::new()),
+            .unwrap_or_else(TokStream2::new),
         Err(e) => return e.to_compile_error().into(),
     };
 
@@ -252,28 +252,41 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
                 f
             })
             .map(wrap_struct)
-            .unwrap_or(proc_macro2::TokenStream::new()),
+            .unwrap_or_else(TokStream2::new),
         Err(e) => return e.to_compile_error().into(),
     };
 
-    let dev_to_host_type: syn::Type = {
-        let orig = ident.to_string();
-        let in_type_str  = if !do_serialize || in_struct.is_empty() {
-            EMPTY_TYPE
-        } else {
-            orig.as_str()
-        };
-        parse_str(in_type_str).unwrap()
-    };
+    let trait_impl = {
+        if do_serialize {
+            let dev_to_host_type = {
+                let orig = ident.to_string();
+                let in_type_str = if in_struct.is_empty() {
+                    EMPTY_TYPE
+                } else {
+                    orig.as_str()
+                };
 
-    let host_to_dev_type: syn::Type = {
-        let out_type_str = if !do_serialize || out_struct.is_empty(){
-            EMPTY_TYPE
-        } else {
-            out_ident.as_str()
-        };
+                str_to_type(in_type_str)
+            };
 
-        parse_str(out_type_str).unwrap()
+            let host_to_dev_type = {
+                let out_type_str = if out_struct.is_empty() {
+                    EMPTY_TYPE
+                } else {
+                    out_ident.as_str()
+                };
+
+                str_to_type(out_type_str)
+            };
+            quote! {
+                impl HIDDescriptorTypes for #ident {
+                    type DeviceToHostReport = #dev_to_host_type;
+                    type HostToDeviceReport = #host_to_dev_type;
+                }
+            }
+        }else {
+            TokStream2::new()
+        }
     };
 
     TokenStream::from(
@@ -283,13 +296,12 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
             #out_struct
 
             impl HIDDescriptor for #ident {
-                type DeviceToHostReport = #dev_to_host_type;
-                type HostToDeviceReport = #host_to_dev_type;
-
                 fn desc() -> &'static[u8] {
                     &#descriptor
                 }
             }
+
+            #trait_impl
         }
     )
 }
@@ -598,3 +610,7 @@ fn byte_literal(lit: u8) -> Pat {
 
 // TODO: Change `!` to never_type is in stable
 static EMPTY_TYPE: &str = "UnsupportedDescriptor";
+
+fn str_to_type(s: &str) -> Type {
+    parse_str(s).unwrap()
+}

@@ -6,7 +6,7 @@ use ssmarshal::{serialize, deserialize};
 use core::marker::PhantomData;
 use serde::{Serialize};
 use serde::de::DeserializeOwned;
-use crate::descriptor::HIDDescriptor;
+use crate::descriptor::{HIDDescriptor, HIDDescriptorTypes};
 
 const USB_CLASS_HID: u8 = 0x03;
 const USB_SUBCLASS_NONE: u8 = 0x00;
@@ -66,7 +66,7 @@ impl<'a, B: UsbBus, T: HIDDescriptor> HIDClass<'a, B, T> {
     }
 }
 
-impl <B: UsbBus, T, I: Serialize> HIDClass<'_, B, T> where T: HIDDescriptor<DeviceToHostReport = I>{
+impl <B: UsbBus, T, I: Serialize> HIDClass<'_, B, T> where T: HIDDescriptorTypes<DeviceToHostReport = I>{
 
     /// Tries to write an input report by serializing the given report structure.
     /// A BufferOverflow error is returned if the serialized report is greater than
@@ -81,7 +81,7 @@ impl <B: UsbBus, T, I: Serialize> HIDClass<'_, B, T> where T: HIDDescriptor<Devi
     }
 }
 
-impl <'sr, B: UsbBus, T, O: DeserializeOwned> HIDClass<'_, B, T> where T: HIDDescriptor<HostToDeviceReport = O> {
+impl <'sr, B: UsbBus, T, O: DeserializeOwned> HIDClass<'_, B, T> where T: HIDDescriptorTypes<HostToDeviceReport = O> {
 
     /// Tries to read an output report by deserializing the incoming bytes.
     /// - A BufferOverflow error is returned if the report sent by the host
