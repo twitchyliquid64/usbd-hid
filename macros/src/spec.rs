@@ -139,8 +139,8 @@ impl IntoIterator for GroupSpec {
     }
 }
 
-pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
-    match (key_name.as_str(), path.as_str()) {
+pub fn try_resolve_constant(key_name: &str, path: String) -> Option<u32> {
+    match (key_name, path.as_str()) {
         ("collection", "PHYSICAL") => Some(0x0),
         ("collection", "APPLICATION") => Some(0x1),
         ("collection", "LOGICAL") => Some(0x2),
@@ -218,24 +218,24 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
     }
 }
 
-fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
+fn parse_group_spec(input: ParseStream, field: &Expr) -> Result<GroupSpec> {
     let mut collection_attrs: Vec<(String, u32)> = vec![];
 
-    if let Expr::Assign(ExprAssign { left, .. }) = field.clone() {
-        if let Expr::Tuple(ExprTuple { elems, .. }) = *left {
+    if let Expr::Assign(ExprAssign { left, .. }) = field {
+        if let Expr::Tuple(ExprTuple { elems, .. }) = left.as_ref() {
             for elem in elems {
-                let group_attr = maybe_parse_kv_lhs(elem.clone());
-                if group_attr.is_none() || group_attr.clone().unwrap().len() != 1 {
+                let group_attr = maybe_parse_kv_lhs(&elem);
+                if group_attr.as_ref().map(|g| g.len() != 1).unwrap_or(false) {
                     return Err(parse::Error::new(
                         input.span(),
                         "`#[gen_hid_descriptor]` group spec key can only have a single element",
                     ));
                 }
-                let group_attr = group_attr.unwrap()[0].clone();
+                let group_attr = &group_attr.unwrap()[0];
 
                 let mut val: Option<u32> = None;
                 if let Expr::Assign(ExprAssign { right, .. }) = elem {
-                    if let Expr::Lit(ExprLit { lit, .. }) = *right {
+                    if let Expr::Lit(ExprLit { lit, .. }) = right.as_ref() {
                         if let Lit::Int(lit) = lit {
                             if let Ok(num) = lit.base10_parse::<u32>() {
                                 val = Some(num);
@@ -244,10 +244,9 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
                     } else if let Expr::Path(ExprPath {
                         path: Path { segments, .. },
                         ..
-                    }) = *right
-                    {
+                    }) = right.as_ref() {
                         val = try_resolve_constant(
-                            group_attr.clone(),
+                            group_attr.as_str(),
                             quote! { #segments }.to_string(),
                         );
                         if val.is_none() {
@@ -264,7 +263,7 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
                 if val.is_none() {
                     return Err(parse::Error::new(input.span(), "`#[gen_hid_descriptor]` group spec attribute value must be a numeric literal or recognized constant"));
                 }
-                collection_attrs.push((group_attr, val.unwrap()));
+                collection_attrs.push((group_attr.clone(), val.unwrap()));
             }
         }
     }
@@ -288,15 +287,14 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
         if let Expr::Block(ExprBlock {
             block: Block { stmts, .. },
             ..
-        }) = *right
-        {
+        }) = right.as_ref() {
             for stmt in stmts {
                 if let Stmt::Expr(e) = stmt {
-                    if let Err(e) = out.from_field(input, e) {
+                    if let Err(e) = out.parse_field(input, e) {
                         return Err(e);
                     }
                 } else if let Stmt::Semi(e, _) = stmt {
-                    if let Err(e) = out.from_field(input, e) {
+                    if let Err(e) = out.parse_field(input, e) {
                         return Err(e);
                     }
                 } else {
@@ -314,12 +312,12 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
 }
 
 /// maybe_parse_kv_lhs returns a vector of :: separated idents.
-fn maybe_parse_kv_lhs(field: Expr) -> Option<Vec<String>> {
+fn maybe_parse_kv_lhs(field: &Expr) -> Option<Vec<String>> {
     if let Expr::Assign(ExprAssign { left, .. }) = field {
         if let Expr::Path(ExprPath {
             path: Path { segments, .. },
             ..
-        }) = *left
+        }) = left.as_ref()
         {
             let mut out: Vec<String> = vec![];
             for s in segments {
@@ -331,13 +329,13 @@ fn maybe_parse_kv_lhs(field: Expr) -> Option<Vec<String>> {
     return None;
 }
 
-fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Option<u16>, ItemQuirks) {
+fn parse_item_attrs(attrs: &Vec<syn::Attribute>) -> (Option<MainItemSetting>, Option<u16>, ItemQuirks) {
     let mut out: MainItemSetting = MainItemSetting { 0: 0 };
     let mut had_settings: bool = false;
     let mut packed_bits: Option<u16> = None;
     let mut quirks: ItemQuirks = ItemQuirks{ ..Default::default() };
 
-    for attr in attrs {
+    for attr in attrs.clone() {
         match attr.path.segments[0].ident.to_string().as_str() {
             "packed_bits" => {
                 for tok in attr.tokens {
@@ -411,10 +409,10 @@ fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Opt
 }
 
 // maybe_parse_kv tries to parse an expression like 'blah=blah'.
-fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting>, Option<u16>, ItemQuirks)> {
+fn maybe_parse_kv(field: &Expr) -> Option<(String, String, Option<MainItemSetting>, Option<u16>, ItemQuirks)> {
     // Match out the identifier on the left of the equals.
     let name: String;
-    if let Some(lhs) = maybe_parse_kv_lhs(field.clone()) {
+    if let Some(lhs) = maybe_parse_kv_lhs(&field) {
         if lhs.len() != 1 {
             return None;
         }
@@ -424,7 +422,7 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
     }
 
     // Decode item settings.
-    let item_settings = if let Expr::Assign(ExprAssign { attrs, .. }) = field.clone() {
+    let item_settings = if let Expr::Assign(ExprAssign { attrs, .. }) = field {
         parse_item_attrs(attrs)
     } else {
         (None, None, ItemQuirks::default())
@@ -436,7 +434,7 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
         if let Expr::Path(ExprPath {
             path: Path { segments, .. },
             ..
-        }) = *right
+        }) = right.as_ref()
         {
             val = Some(segments[0].ident.clone().to_string());
         }
@@ -455,28 +453,31 @@ impl Parse for GroupSpec {
         };
         let fields: Punctuated<Expr, Token![,]> = input.parse_terminated(Expr::parse)?;
         if fields.len() == 0 {
-            return Err(parse::Error::new(
+            Err(parse::Error::new(
                 input.span(),
                 "`#[gen_hid_descriptor]` expected information about the HID report",
-            ));
-        }
-        for field in fields {
-            if let Err(e) = out.from_field(input, field) {
-                return Err(e);
+            ))
+        }else {
+            for field in fields {
+                out.parse_field(input, &field)?;
             }
+            Ok(out)
         }
-        Ok(out)
+
     }
 }
 
 impl GroupSpec {
-    fn from_field(&mut self, input: ParseStream, field: Expr) -> Result<()> {
-        if let Some(i) = maybe_parse_kv(field.clone()) {
-            let (name, item_kind, settings, bits, quirks) = i;
+    fn parse_field(&mut self, input: ParseStream, field: &Expr) -> Result<()> {
+        if let Some((name,
+                     item_kind,
+                     settings,
+                     bits,
+                     quirks)) = maybe_parse_kv(field) {
             self.set_item(name, item_kind.into(), settings, bits, quirks);
             return Ok(());
         };
-        match parse_group_spec(input, field.clone()) {
+        match parse_group_spec(input, field) {
             Err(e) => return Err(e),
             Ok(g) => self.add_nested_group(g),
         };

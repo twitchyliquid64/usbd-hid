@@ -20,9 +20,10 @@ pub(crate) fn filter_struct_fields(
     keep: MainItemKind,
 ) -> Result<Option<ItemStruct>> {
     let mut out = orig.clone();
-    if let Fields::Named(fns) = out.fields {
-        let FieldsNamed { brace_token, named } = fns;
 
+    if let Fields::Named(
+        FieldsNamed { brace_token, named }
+    ) = out.fields {
         let mut filtered = Punctuated::new();
 
         let keeps: Vec<Ident> = fields

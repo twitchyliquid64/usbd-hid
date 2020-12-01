@@ -223,11 +223,11 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
 
     let do_serialize = !uses_report_ids(&Spec::Collection(spec.clone()));
 
-    let output = match compile_descriptor(spec, &decl.fields) {
-        Ok(d) => d,
-        Err(e) => return e.to_compile_error().into(),
-    };
-    let (descriptor, fields) = output;
+    let (descriptor, fields) =
+        match compile_descriptor(spec, &decl.fields) {
+            Ok(d) => d,
+            Err(e) => return e.to_compile_error().into(),
+        };
 
     let in_struct = match filter_struct_fields(&decl, &fields, Input) {
         Ok(d) => d
@@ -315,14 +315,12 @@ fn compile_descriptor(
     };
     let mut elems = Punctuated::new();
 
-    if let Err(e) = compiler.emit_group(&mut elems, &spec, fields) {
-        return Err(e);
-    };
+    compiler.emit_group(&mut elems, &spec, fields)?;
 
     Ok((
         PatSlice {
             attrs: vec![],
-            elems: elems,
+            elems,
             bracket_token: Bracket {
                 span: Span::call_site(),
             },
@@ -504,8 +502,6 @@ impl DescCompilation {
         spec: &GroupSpec,
         fields: &Fields,
     ) -> Result<()> {
-        // println!("GROUP: {:?}", spec);
-
         if let Some(usage_page) = spec.usage_page {
             self.emit_item(
                 elems,
@@ -568,8 +564,7 @@ impl DescCompilation {
         }
 
         for name in spec.clone() {
-            let f = spec.get(name.clone()).unwrap();
-            match f {
+            match spec.get(name.clone()).unwrap() {
                 Spec::MainItem(i) => {
                     let d = field_decl(fields, name);
                     match analyze_field(d.clone(), d.ty, i) {
@@ -581,9 +576,7 @@ impl DescCompilation {
                     }
                 }
                 Spec::Collection(g) => {
-                    if let Err(e) = self.emit_group(elems, g, fields) {
-                        return Err(e);
-                    }
+                    self.emit_group(elems, g, fields)?
                 }
             }
         }
