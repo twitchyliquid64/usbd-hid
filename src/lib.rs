@@ -173,16 +173,22 @@ mod tests {
     // 0x81, 0x02,        // Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     // 0x95, 0x07,        // Report Count (7)
     // 0x81, 0x03,        // Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    // 0x95, 0x14,        // Report Count (20)
+    // 0x81, 0x02,        // Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+    // 0x95, 0x04,        // Report Count (4)
+    // 0x81, 0x03,        // Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     #[gen_hid_descriptor(
         (report_id = 0x01,) = {
             #[packed_bits 3] f1=input;
             #[packed_bits 9] f2=input;
+            #[packed_bits 20] f3=input;
         }
     )]
     #[allow(dead_code)]
     struct CustomPackedBits {
         f1: u8,
         f2: u16,
+        f3: [u8; 3],
     }
 
     #[test]
@@ -190,6 +196,7 @@ mod tests {
         let expected = &[
             133u8, 1u8, 21u8, 0u8, 37u8, 1u8, 117u8, 1u8, 149u8, 3u8, 129u8, 2u8,
             149u8, 5u8, 129u8, 3u8, 149u8, 9u8, 129u8, 2u8, 149u8, 7u8, 129u8, 3u8,
+            149u8, 20u8, 129u8, 2u8, 149u8, 4u8, 129u8, 3u8,
         ];
         assert_eq!(CustomPackedBits::desc(), expected);
     }
