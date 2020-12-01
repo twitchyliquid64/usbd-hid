@@ -402,10 +402,8 @@ impl DescCompilation {
         self.emit(elems, &mut prefix, buf, signed);
     }
 
-    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: MainItem, quirks: ItemQuirks) {
-        if self.logical_minimum.is_none()
-            || self.logical_minimum.clone().unwrap() != item.logical_minimum
-        {
+    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: &MainItem, quirks: &ItemQuirks) {
+        if self.logical_minimum.map_or(true, |c| c != item.logical_minimum) {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -416,9 +414,7 @@ impl DescCompilation {
             );
             self.logical_minimum = Some(item.logical_minimum);
         }
-        if self.logical_maximum.is_none()
-            || self.logical_maximum.clone().unwrap() != item.logical_maximum
-        {
+        if self.logical_maximum.map_or(true, |c| c != item.logical_maximum) {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -429,7 +425,7 @@ impl DescCompilation {
             );
             self.logical_maximum = Some(item.logical_maximum);
         }
-        if self.report_size.is_none() || self.report_size.clone().unwrap() != item.report_size {
+        if self.report_size.map_or(true, |c| c != item.report_size) {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -440,7 +436,7 @@ impl DescCompilation {
             );
             self.report_size = Some(item.report_size);
         }
-        if self.report_count.is_none() || self.report_count.clone().unwrap() != item.report_count {
+        if self.report_count.map_or(true, |c| c != item.report_count)  {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),

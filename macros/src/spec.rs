@@ -225,7 +225,7 @@ fn parse_group_spec(input: ParseStream, field: &Expr) -> Result<GroupSpec> {
         if let Expr::Tuple(ExprTuple { elems, .. }) = left.as_ref() {
             for elem in elems {
                 let group_attr = maybe_parse_kv_lhs(&elem);
-                if group_attr.as_ref().map(|g| g.len() != 1).unwrap_or(false) {
+                if group_attr.as_ref().map_or(true, |g| g.len() != 1) {
                     return Err(parse::Error::new(
                         input.span(),
                         "`#[gen_hid_descriptor]` group spec key can only have a single element",
