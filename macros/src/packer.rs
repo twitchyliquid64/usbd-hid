@@ -47,7 +47,12 @@ pub fn gen_serializer(fields: Vec<ReportUnaryField>, typ: MainItemKind) -> Resul
 
         let rc = match field.descriptor_item.report_size {
             1 => {
-                elems.push(make_unary_serialize_invocation(field.bit_width, field.ident.clone(), signed));
+                if field.descriptor_item.report_count == 1 {
+                    elems.push(make_unary_serialize_invocation(field.bit_width, field.ident.clone(), signed));
+                } else {
+                    let ident = field.ident.clone();
+                    elems.push(quote!({ s.serialize_element(&self.#ident)?; }));
+                }
                 Ok(())
             },
             8 => { // u8 / i8
