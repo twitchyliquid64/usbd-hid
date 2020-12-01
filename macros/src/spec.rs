@@ -9,6 +9,7 @@ use syn::{Block, ExprBlock, ExprLit, ExprTuple, Lit, Stmt};
 use std::collections::HashMap;
 use std::string::String;
 use usbd_hid_descriptors::*;
+use syn::spanned::Spanned;
 
 // Spec describes an item within a HID report.
 #[derive(Debug, Clone)]
@@ -302,6 +303,11 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
                     return Err(parse::Error::new(input.span(), "`#[gen_hid_descriptor]` group spec body can only contain semicolon-separated fields"));
                 }
             }
+        } else {
+            return Err(parse::Error::new(
+                right.span(),
+                "`#[gen_hid_descriptor]` group spec rhs must be a block (did you miss a `,`)",
+            ))
         };
     };
     Ok(out)
