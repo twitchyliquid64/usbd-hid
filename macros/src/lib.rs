@@ -4,11 +4,11 @@ extern crate proc_macro;
 extern crate usbd_hid_descriptors;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, Span};
+use proc_macro2::{Span};
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::token::Bracket;
-use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct};
+use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct, parse_str};
 use syn::{Pat, PatSlice, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
@@ -248,7 +248,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     let out_struct = match filter_struct_fields(&decl, &fields, Output) {
         Ok(d) => d
             .map(|mut f| {
-                f.ident = Ident::new(out_ident.as_str(), Span::call_site());
+                f.ident = parse_str(out_ident.as_str()).unwrap();
                 f
             })
             .map(wrap_struct)
@@ -263,7 +263,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         } else {
             orig.as_str()
         };
-        syn::parse_str(in_type_str).unwrap()
+        parse_str(in_type_str).unwrap()
     };
 
     let host_to_dev_type: syn::Type = {
@@ -273,7 +273,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
             out_ident.as_str()
         };
 
-        syn::parse_str(out_type_str).unwrap()
+        parse_str(out_type_str).unwrap()
     };
 
     TokenStream::from(
