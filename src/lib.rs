@@ -201,6 +201,11 @@ mod tests {
         assert_eq!(CustomPackedBits::desc(), expected);
     }
 
+    #[test]
+    fn test_custom_packed_bits_in() {
+        // test compiles
+        CustomPackedBits::R1 { f1: 1, f2: 2, f3: [3u8; 3] };
+    }
 
     #[test]
     fn test_mouse_descriptor() {
@@ -249,4 +254,27 @@ mod tests {
         ];
         assert_eq!(KeyboardReport::desc()[0..51], expected[0..51]);
     }
+
+    #[gen_hid_descriptor(
+        (report_id = 0x01,) = {
+            #[packed_bits 3] f1=input;
+            #[packed_bits 20] f3=input;
+        },
+        (report_id = 0xff,) = {
+            #[packed_bits 9] f2=output;
+        }
+    )]
+    #[allow(dead_code)]
+    struct CustomPackedOutBits {
+        f1: u8,
+        f2: u16,
+        f3: [u8; 3],
+    }
+
+    #[test]
+    fn custom_packed_out_bits() {
+        CustomPackedOutBits::R1{f1: 1, f3: [3u8; 3]};
+        CustomPackedOutBitsOut::R255{f2: 2};
+    }
+
 }

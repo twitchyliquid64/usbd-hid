@@ -26,7 +26,7 @@ pub(crate) fn generate_type(
         for i in 0u8..=255u8 {
             variants_iter.push(Variant {
                 attrs: Vec::new(),
-                ident: parse_str(format!("X{}", i).as_str()).unwrap(),
+                ident: parse_str(format!("R{}", i).as_str()).unwrap(),
                 fields: fields.remove(&Some(i)).unwrap_or(Fields::Unit),
                 discriminant: None
             });
