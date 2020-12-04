@@ -263,8 +263,8 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
 
     if !named_fields.is_empty() {
         println!(
-            "WARN: unused fields {} in struct {} will be ignored",
-            named_fields.iter().fold(String::new(), |o, (i, _)| o + i.to_string().as_str() + ", "),
+            "WARN: unused fields [{}]in struct {} will be removed",
+            named_fields.iter().fold(String::new(), |o, (i, _)| o + i.to_string().as_str() + ","),
             ident);
     }
 
