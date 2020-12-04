@@ -22,6 +22,20 @@ pub(crate) fn generate_type(
             ..template
         }.to_token_stream()
     } else {
+        let mut variants_iter = Vec::<Variant>::new();
+        for i in 0u8..=255u8 {
+            variants_iter.push(Variant {
+                attrs: Vec::new(),
+                ident: parse_str(format!("X{}", i).as_str()).unwrap(),
+                fields: fields.remove(&Some(i)).unwrap_or(Fields::Unit),
+                discriminant: None
+            });
+
+            if fields.is_empty() {
+                break
+            }
+        }
+
         ItemEnum {
             attrs: template.attrs,
             vis: template.vis,
@@ -29,14 +43,7 @@ pub(crate) fn generate_type(
             brace_token: Default::default(),
             ident,
             enum_token: syn::token::Enum{ span: Span::call_site() },
-            variants: Punctuated::from_iter(fields.into_iter().map(|(k, v)| {
-                Variant {
-                    attrs: Vec::new(),
-                    ident: parse_str(format!("X{}", k.unwrap()).as_str()).unwrap(),
-                    fields: v,
-                    discriminant: None
-                }
-            }))
+            variants: Punctuated::from_iter(variants_iter)
         }.to_token_stream()
     }
 }
