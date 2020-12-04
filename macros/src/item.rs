@@ -12,6 +12,7 @@ pub struct MainItem {
     pub logical_maximum: isize,
     pub report_count: u16,
     pub report_size: u16,
+    pub report_id: Option<u8>,
     pub padding_bits: Option<u16>,
 }
 
@@ -132,6 +133,7 @@ fn unary_item(id: Ident, kind: MainItemKind, bit_width: usize) -> ReportUnaryFie
             logical_maximum: 0,
             report_count: 1,
             report_size: bit_width as u16,
+            report_id: None,
             padding_bits: None,
         },
     }

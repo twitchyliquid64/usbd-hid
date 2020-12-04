@@ -20,7 +20,7 @@ pub enum Spec {
 
 // ItemQuirks describes minor settings which can be tweaked for
 // compatibility.
-#[derive(Debug, Clone, Default, Copy)]
+#[derive(Debug, Clone, Default)]
 pub struct ItemQuirks {
     pub allow_short_form: bool,
 }
@@ -42,7 +42,7 @@ pub struct GroupSpec {
     pub fields: HashMap<String, Spec>,
     pub field_order: Vec<String>,
 
-    pub report_id: Option<u32>,
+    pub report_id: Option<u8>,
     pub usage_page: Option<u32>,
     pub collection: Option<u32>,
 
@@ -95,7 +95,7 @@ impl GroupSpec {
     pub fn try_set_attr(&mut self, input: ParseStream, name: String, val: u32) -> Result<()> {
         match name.as_str() {
             "report_id" => {
-                self.report_id = Some(val);
+                self.report_id = Some(val as u8);
                 Ok(())
             }
             "usage_page" => {

@@ -4,26 +4,32 @@ extern crate proc_macro;
 extern crate usbd_hid_descriptors;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Span, TokenStream as TokStream2};
-use quote::quote;
-use syn::punctuated::Punctuated;
-use syn::token::Bracket;
-use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct, parse_str, Type};
-use syn::{Pat, PatSlice, Result};
+use std::collections::{HashMap};
+use std::iter::FromIterator;
 
 use byteorder::{ByteOrder, LittleEndian};
+use item::*;
+use proc_macro2::{Span, TokenStream as TokStream2};
+use quote::quote;
+use spec::*;
+use syn::{Field, FieldsNamed};
+use syn::{Expr, Fields, ItemStruct, parse, parse_macro_input, parse_str, Type};
+use syn::{Pat, PatSlice, Result};
+use syn::punctuated::Punctuated;
+use syn::token::Bracket;
 use usbd_hid_descriptors::*;
+use usbd_hid_descriptors::MainItemKind::{Input, Output};
+
+use crate::gen::{extract_and_format_derive, generate_type};
+use crate::split::read_struct;
+use crate::utils::{group_by, map_group_by};
 
 mod spec;
-use spec::*;
 mod item;
-use item::*;
-mod packer;
 mod split;
-
-use crate::split::{filter_struct_fields, wrap_struct};
-use packer::uses_report_ids;
-use usbd_hid_descriptors::MainItemKind::{Input, Output};
+#[macro_use]
+mod utils;
+mod gen;
 
 /// Attribute to generate a HID descriptor & serialization code
 ///
@@ -206,10 +212,10 @@ use usbd_hid_descriptors::MainItemKind::{Input, Output};
 pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream {
     let decl = parse_macro_input!(input as ItemStruct);
     let spec = parse_macro_input!(args as GroupSpec);
-    let ident = decl.ident.clone();
+    let ident = &decl.ident;
 
     // Error if the struct doesn't name its fields.
-    match decl.clone().fields {
+    match decl.fields {
         Fields::Named(_) => (),
         _ => {
             return parse::Error::new(
@@ -221,62 +227,88 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         }
     };
 
-    let do_serialize = !uses_report_ids(&Spec::Collection(spec.clone()));
+    let do_serialize = true;
 
-    let (descriptor, fields) =
-        match compile_descriptor(spec, &decl.fields) {
-            Ok(d) => d,
-            Err(e) => return e.to_compile_error().into(),
-        };
+    let (descriptor, fields) = guard_syn!(compile_descriptor(spec, &decl.fields));
 
-    let in_struct = match filter_struct_fields(&decl, &fields, Input) {
-        Ok(d) => d
-            .map(wrap_struct)
-            .unwrap_or_else(TokStream2::new),
-        Err(e) => return e.to_compile_error().into(),
-    };
+    let (struct_fields, mut empty_struct) = guard_syn!(read_struct(&decl));
+
+    let mut named_fields: HashMap<_, Field> = struct_fields.named
+        .into_iter()
+        .filter(|f| f.ident.is_some())
+        .map(|f| (f.ident.as_ref().unwrap().clone(), f))
+        .collect();
+
+    let mut by_op_and_id: HashMap<_, HashMap<_, _>> =
+        group_by(&fields, |f| f.descriptor_item.kind)
+            .iter()
+            .map(|(k, v)|
+                 (
+                     *k,
+                      map_group_by(
+                         v,
+                         |f| f.descriptor_item.report_id,
+                         |f| named_fields.remove(&f.ident).unwrap()
+                      ).into_iter().map(|(k,v)| {
+                          (
+                              k,
+                              syn::Fields::Named(FieldsNamed{
+                                 brace_token: Default::default(),
+                                 named: Punctuated::from_iter(v)
+                              })
+                          )
+                      } ).collect()
+                 )
+             ).collect();
+
+    if !named_fields.is_empty() {
+        println!(
+            "WARN: unused fields {} in struct {} will be ignored",
+            named_fields.iter().fold(String::new(), |o, (i, _)| o + i.to_string().as_str() + ", "),
+            ident);
+    }
+
+    let new_derive = guard_syn!(extract_and_format_derive(&mut empty_struct));
+
+    empty_struct.attrs.push(new_derive);
+
+    let in_type = by_op_and_id.remove(&Input).map(|v|
+        generate_type(&empty_struct, ident.clone(), v)
+    );
 
     let out_ident = {
-        let orig = ident.to_string();
-        if in_struct.is_empty() {
-            format!("{}", orig)
+        if in_type.is_none() {
+            ident.clone()
         } else {
-            format!("{}Out", orig)
+            parse_str(format!("{}{}", ident, "Out").as_str()).unwrap()
         }
     };
 
-    let out_struct = match filter_struct_fields(&decl, &fields, Output) {
-        Ok(d) => d
-            .map(|mut f| {
-                f.ident = parse_str(out_ident.as_str()).unwrap();
-                f
-            })
-            .map(wrap_struct)
-            .unwrap_or_else(TokStream2::new),
-        Err(e) => return e.to_compile_error().into(),
-    };
+    let out_type = by_op_and_id.remove(&Output).map(|v|
+        generate_type(&empty_struct, out_ident.clone(), v)
+    );
 
     let trait_impl = {
         if do_serialize {
             let dev_to_host_type = {
                 let orig = ident.to_string();
-                let in_type_str = if in_struct.is_empty() {
+                let in_type_str = if in_type.is_none() {
                     EMPTY_TYPE
                 } else {
                     orig.as_str()
                 };
 
-                str_to_type(in_type_str)
+                parse_str::<Type>(in_type_str).unwrap()
             };
 
             let host_to_dev_type = {
-                let out_type_str = if out_struct.is_empty() {
-                    EMPTY_TYPE
+                let out_type_str = if out_type.is_none() {
+                    EMPTY_TYPE.to_owned()
                 } else {
-                    out_ident.as_str()
+                    out_ident.to_string()
                 };
 
-                str_to_type(out_type_str)
+                parse_str::<Type>(out_type_str.as_str()).unwrap()
             };
             quote! {
                 impl HIDDescriptorTypes for #ident {
@@ -291,9 +323,9 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
 
     TokenStream::from(
         quote! {
-            #in_struct
+            #in_type
 
-            #out_struct
+            #out_type
 
             impl HIDDescriptor for #ident {
                 fn desc() -> &'static[u8] {
@@ -335,6 +367,7 @@ struct DescCompilation {
     logical_maximum: Option<isize>,
     report_size: Option<u16>,
     report_count: Option<u16>,
+    report_id: Option<u8>,
     processed_fields: Vec<ReportUnaryField>,
 }
 
@@ -447,6 +480,19 @@ impl DescCompilation {
             );
             self.report_count = Some(item.report_count);
         }
+        item.report_id.map(|report_id| {
+            if self.report_id.map_or(true, |c| c != report_id)  {
+                self.emit_item(
+                    elems,
+                    ItemType::Global.into(),
+                    GlobalItemKind::ReportID.into(),
+                    report_id as isize,
+                    true,
+                    quirks.allow_short_form,
+                );
+                self.report_id = Some(report_id);
+            }
+        });
     }
 
     fn emit_field(
@@ -455,7 +501,7 @@ impl DescCompilation {
         i: &ItemSpec,
         item: MainItem,
     ) {
-        self.handle_globals(elems, item.clone(), i.quirks);
+        self.handle_globals(elems, &item, &i.quirks);
         let item_data = match &i.settings {
             Some(s) => s.0 as isize,
             None => 0x02, // 0x02 = Data,Var,Abs
@@ -476,7 +522,7 @@ impl DescCompilation {
                 report_count: padding,
                 ..item
             };
-            self.handle_globals(elems, padding.clone(), i.quirks);
+            self.handle_globals(elems, &padding, &i.quirks);
 
             let mut const_settings = MainItemSetting { 0: 0 };
             const_settings.set_constant(true);
@@ -564,7 +610,8 @@ impl DescCompilation {
                 Spec::MainItem(i) => {
                     let d = field_decl(fields, name);
                     match analyze_field(d.clone(), d.ty, i) {
-                        Ok(item) => {
+                        Ok(mut item) => {
+                            spec.report_id.map(|id| item.descriptor_item.report_id = Some(id));
                             self.processed_fields.push(item.clone());
                             self.emit_field(elems, i, item.descriptor_item)
                         }
@@ -599,7 +646,3 @@ fn byte_literal(lit: u8) -> Pat {
 
 // TODO: Change `!` to never_type is in stable
 static EMPTY_TYPE: &str = "UnsupportedDescriptor";
-
-fn str_to_type(s: &str) -> Type {
-    parse_str(s).unwrap()
-}

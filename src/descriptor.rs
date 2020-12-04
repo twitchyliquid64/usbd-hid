@@ -45,6 +45,7 @@ use generator_prelude::*;
     }
 )]
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct MouseReport {
     pub buttons: u8,
     pub x: i8,
@@ -68,6 +69,7 @@ pub struct MouseReport {
     }
 )]
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct KeyboardReport {
     pub modifier: u8,
     pub leds: u8,
