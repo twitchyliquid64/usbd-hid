@@ -482,14 +482,6 @@ impl DescCompilation {
         }
         item.report_id.map(|report_id| {
             if self.report_id.map_or(true, |c| c != report_id)  {
-                self.emit_item(
-                    elems,
-                    ItemType::Global.into(),
-                    GlobalItemKind::ReportID.into(),
-                    report_id as isize,
-                    true,
-                    quirks.allow_short_form,
-                );
                 self.report_id = Some(report_id);
             }
         });
