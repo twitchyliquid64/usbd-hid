@@ -35,6 +35,9 @@ pub mod generator_prelude {
                 (usage = Y,) = {
                     #[item_settings data,variable,relative] y=input;
                 };
+                (usage = WHEEL,) = {
+                    #[item_settings data,variable,relative] wheel=input;
+                };
             };
         };
     }
@@ -44,6 +47,7 @@ pub struct MouseReport {
     pub buttons: u8,
     pub x: i8,
     pub y: i8,
+    pub wheel: i8, // Scroll down (negative) or up (positive) this many units
 }
 
 /// KeyboardReport describes a report and its companion descriptor that can be
