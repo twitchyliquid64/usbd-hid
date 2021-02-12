@@ -52,7 +52,7 @@ impl Into<u8> for LocalItemKind {
 /// 'Report Descriptor' of the spec, version 1.11.
 #[repr(u8)]
 #[allow(unused)]
-#[derive(Copy, Debug, Clone, Eq, PartialEq)]
+#[derive(Copy, Debug, Clone, Eq, PartialEq, Hash)]
 pub enum MainItemKind {
     Input = 0b1000,
     Output = 0b1001,

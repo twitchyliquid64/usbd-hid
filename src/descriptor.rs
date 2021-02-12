@@ -1,24 +1,29 @@
 //! Implements generation of HID report descriptors as well as common reports
-extern crate usbd_hid_macros;
-extern crate serde;
-use serde::ser::{Serialize, Serializer, SerializeTuple};
-
-pub use usbd_hid_macros::gen_hid_descriptor;
 
 /// Report types where serialized HID report descriptors are available.
-pub trait SerializedDescriptor {
-    fn desc() -> &'static[u8];
+pub trait HIDDescriptor {
+    fn desc() -> &'static [u8];
 }
 
-/// Report types which serialize into input reports, ready for transmission.
-pub trait AsInputReport: Serialize {}
+/// Report types where serializable or deserializable in/out types are available.
+pub trait HIDDescriptorTypes: HIDDescriptor {
+    type DeviceToHostReport;
+    type HostToDeviceReport;
+}
+
+/// Placeholder Type that is nither serializable nor deserializable
+pub struct UnsupportedDescriptor;
 
 /// Prelude for modules which use the `gen_hid_descriptor` macro.
+/// To use managed serialize/deserialize features, crate `serde` must be
+/// included e.g. `serde = { version = "~1.0", default-features = false }`
 pub mod generator_prelude {
     pub use usbd_hid_macros::gen_hid_descriptor;
-    pub use crate::descriptor::{SerializedDescriptor, AsInputReport};
-    pub use serde::ser::{Serialize, SerializeTuple, Serializer};
+    pub use crate::descriptor::{HIDDescriptor, HIDDescriptorTypes, UnsupportedDescriptor};
+    pub use serde::{Serialize, Deserialize};
 }
+
+use generator_prelude::*;
 
 /// MouseReport describes a report and its companion descriptor than can be used
 /// to send mouse movements and button presses to a host.
@@ -43,6 +48,7 @@ pub mod generator_prelude {
     }
 )]
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct MouseReport {
     pub buttons: u8,
     pub x: i8,
@@ -67,6 +73,7 @@ pub struct MouseReport {
     }
 )]
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct KeyboardReport {
     pub modifier: u8,
     pub leds: u8,

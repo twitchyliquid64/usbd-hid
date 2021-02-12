@@ -4,22 +4,32 @@ extern crate proc_macro;
 extern crate usbd_hid_descriptors;
 
 use proc_macro::TokenStream;
-use proc_macro2::Span;
-use quote::quote;
-use syn::punctuated::Punctuated;
-use syn::token::Bracket;
-use syn::{parse, parse_macro_input, Expr, Fields, ItemStruct};
-use syn::{Pat, PatSlice, Result};
+use std::collections::{HashMap};
+use std::iter::FromIterator;
 
 use byteorder::{ByteOrder, LittleEndian};
+use item::*;
+use proc_macro2::{Span, TokenStream as TokStream2};
+use quote::quote;
+use spec::*;
+use syn::{Field, FieldsNamed};
+use syn::{Expr, Fields, ItemStruct, parse, parse_macro_input, parse_str, Type};
+use syn::{Pat, PatSlice, Result};
+use syn::punctuated::Punctuated;
+use syn::token::Bracket;
 use usbd_hid_descriptors::*;
+use usbd_hid_descriptors::MainItemKind::{Input, Output};
+
+use crate::gen::{extract_and_format_derive, generate_type};
+use crate::split::read_struct;
+use crate::utils::{group_by, map_group_by};
 
 mod spec;
-use spec::*;
 mod item;
-use item::*;
-mod packer;
-use packer::{gen_serializer, uses_report_ids};
+mod split;
+#[macro_use]
+mod utils;
+mod gen;
 
 /// Attribute to generate a HID descriptor & serialization code
 ///
@@ -202,10 +212,10 @@ use packer::{gen_serializer, uses_report_ids};
 pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream {
     let decl = parse_macro_input!(input as ItemStruct);
     let spec = parse_macro_input!(args as GroupSpec);
-    let ident = decl.ident.clone();
+    let ident = &decl.ident;
 
     // Error if the struct doesn't name its fields.
-    match decl.clone().fields {
+    match decl.fields {
         Fields::Named(_) => (),
         _ => {
             return parse::Error::new(
@@ -217,48 +227,115 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         }
     };
 
-    let do_serialize = !uses_report_ids(&Spec::Collection(spec.clone()));
+    let do_serialize = true;
 
-    let output = match compile_descriptor(spec, &decl.fields) {
-        Ok(d) => d,
-        Err(e) => return e.to_compile_error().into(),
-    };
-    let (descriptor, fields) = output;
+    let (descriptor, fields) = guard_syn!(compile_descriptor(spec, &decl.fields));
 
-    let mut out = quote! {
-        #[derive(Debug, Clone, Copy)]
-        #[repr(C, packed)]
-        #decl
+    let (struct_fields, mut empty_struct) = guard_syn!(read_struct(&decl));
 
-        impl SerializedDescriptor for #ident {
-            fn desc() -> &'static[u8] {
-                &#descriptor
-            }
+    let mut named_fields: HashMap<_, Field> = struct_fields.named
+        .into_iter()
+        .filter(|f| f.ident.is_some())
+        .map(|f| (f.ident.as_ref().unwrap().clone(), f))
+        .collect();
+
+    let mut by_op_and_id: HashMap<_, HashMap<_, _>> =
+        group_by(&fields, |f| f.descriptor_item.kind)
+            .iter()
+            .map(|(k, v)|
+                 (
+                     *k,
+                      map_group_by(
+                         v,
+                         |f| f.descriptor_item.report_id,
+                         |f| named_fields.remove(&f.ident).unwrap()
+                      ).into_iter().map(|(k,v)| {
+                          (
+                              k,
+                              syn::Fields::Named(FieldsNamed{
+                                 brace_token: Default::default(),
+                                 named: Punctuated::from_iter(v)
+                              })
+                          )
+                      } ).collect()
+                 )
+             ).collect();
+
+    if !named_fields.is_empty() {
+        println!(
+            "WARN: unused fields [{}]in struct {} will be removed",
+            named_fields.iter().fold(String::new(), |o, (i, _)| o + i.to_string().as_str() + ","),
+            ident);
+    }
+
+    let new_derive = guard_syn!(extract_and_format_derive(&mut empty_struct));
+
+    empty_struct.attrs.push(new_derive);
+
+    let in_type = by_op_and_id.remove(&Input).map(|v|
+        generate_type(&empty_struct, ident.clone(), v)
+    );
+
+    let out_ident = {
+        if in_type.is_none() {
+            ident.clone()
+        } else {
+            parse_str(format!("{}{}", ident, "Out").as_str()).unwrap()
         }
     };
 
-    if do_serialize {
-        let input_serializer = match gen_serializer(fields, MainItemKind::Input) {
-            Ok(s) => s,
-            Err(e) => return e.to_compile_error().into(),
-        };
+    let out_type = by_op_and_id.remove(&Output).map(|v|
+        generate_type(&empty_struct, out_ident.clone(), v)
+    );
 
-        out = quote! {
-            #out
+    let trait_impl = {
+        if do_serialize {
+            let dev_to_host_type = {
+                let orig = ident.to_string();
+                let in_type_str = if in_type.is_none() {
+                    EMPTY_TYPE
+                } else {
+                    orig.as_str()
+                };
 
-            impl Serialize for #ident {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
-                {
-                    #input_serializer
+                parse_str::<Type>(in_type_str).unwrap()
+            };
+
+            let host_to_dev_type = {
+                let out_type_str = if out_type.is_none() {
+                    EMPTY_TYPE.to_owned()
+                } else {
+                    out_ident.to_string()
+                };
+
+                parse_str::<Type>(out_type_str.as_str()).unwrap()
+            };
+            quote! {
+                impl HIDDescriptorTypes for #ident {
+                    type DeviceToHostReport = #dev_to_host_type;
+                    type HostToDeviceReport = #host_to_dev_type;
                 }
             }
-            impl AsInputReport for #ident {}
-        };
-    }
+        }else {
+            TokStream2::new()
+        }
+    };
 
-    TokenStream::from(out)
+    TokenStream::from(
+        quote! {
+            #in_type
+
+            #out_type
+
+            impl HIDDescriptor for #ident {
+                fn desc() -> &'static[u8] {
+                    &#descriptor
+                }
+            }
+
+            #trait_impl
+        }
+    )
 }
 
 fn compile_descriptor(
@@ -270,14 +347,12 @@ fn compile_descriptor(
     };
     let mut elems = Punctuated::new();
 
-    if let Err(e) = compiler.emit_group(&mut elems, &spec, fields) {
-        return Err(e);
-    };
+    compiler.emit_group(&mut elems, &spec, fields)?;
 
     Ok((
         PatSlice {
             attrs: vec![],
-            elems: elems,
+            elems,
             bracket_token: Bracket {
                 span: Span::call_site(),
             },
@@ -292,6 +367,7 @@ struct DescCompilation {
     logical_maximum: Option<isize>,
     report_size: Option<u16>,
     report_count: Option<u16>,
+    report_id: Option<u8>,
     processed_fields: Vec<ReportUnaryField>,
 }
 
@@ -359,10 +435,8 @@ impl DescCompilation {
         self.emit(elems, &mut prefix, buf, signed);
     }
 
-    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: MainItem, quirks: ItemQuirks) {
-        if self.logical_minimum.is_none()
-            || self.logical_minimum.clone().unwrap() != item.logical_minimum
-        {
+    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: &MainItem, quirks: &ItemQuirks) {
+        if self.logical_minimum.map_or(true, |c| c != item.logical_minimum) {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -373,9 +447,7 @@ impl DescCompilation {
             );
             self.logical_minimum = Some(item.logical_minimum);
         }
-        if self.logical_maximum.is_none()
-            || self.logical_maximum.clone().unwrap() != item.logical_maximum
-        {
+        if self.logical_maximum.map_or(true, |c| c != item.logical_maximum) {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -386,7 +458,7 @@ impl DescCompilation {
             );
             self.logical_maximum = Some(item.logical_maximum);
         }
-        if self.report_size.is_none() || self.report_size.clone().unwrap() != item.report_size {
+        if self.report_size.map_or(true, |c| c != item.report_size) {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -397,7 +469,7 @@ impl DescCompilation {
             );
             self.report_size = Some(item.report_size);
         }
-        if self.report_count.is_none() || self.report_count.clone().unwrap() != item.report_count {
+        if self.report_count.map_or(true, |c| c != item.report_count)  {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -408,6 +480,11 @@ impl DescCompilation {
             );
             self.report_count = Some(item.report_count);
         }
+        item.report_id.map(|report_id| {
+            if self.report_id.map_or(true, |c| c != report_id)  {
+                self.report_id = Some(report_id);
+            }
+        });
     }
 
     fn emit_field(
@@ -416,7 +493,7 @@ impl DescCompilation {
         i: &ItemSpec,
         item: MainItem,
     ) {
-        self.handle_globals(elems, item.clone(), i.quirks);
+        self.handle_globals(elems, &item, &i.quirks);
         let item_data = match &i.settings {
             Some(s) => s.0 as isize,
             None => 0x02, // 0x02 = Data,Var,Abs
@@ -437,7 +514,7 @@ impl DescCompilation {
                 report_count: padding,
                 ..item
             };
-            self.handle_globals(elems, padding.clone(), i.quirks);
+            self.handle_globals(elems, &padding, &i.quirks);
 
             let mut const_settings = MainItemSetting { 0: 0 };
             const_settings.set_constant(true);
@@ -459,8 +536,6 @@ impl DescCompilation {
         spec: &GroupSpec,
         fields: &Fields,
     ) -> Result<()> {
-        // println!("GROUP: {:?}", spec);
-
         if let Some(usage_page) = spec.usage_page {
             self.emit_item(
                 elems,
@@ -523,12 +598,12 @@ impl DescCompilation {
         }
 
         for name in spec.clone() {
-            let f = spec.get(name.clone()).unwrap();
-            match f {
+            match spec.get(name.clone()).unwrap() {
                 Spec::MainItem(i) => {
                     let d = field_decl(fields, name);
                     match analyze_field(d.clone(), d.ty, i) {
-                        Ok(item) => {
+                        Ok(mut item) => {
+                            spec.report_id.map(|id| item.descriptor_item.report_id = Some(id));
                             self.processed_fields.push(item.clone());
                             self.emit_field(elems, i, item.descriptor_item)
                         }
@@ -536,9 +611,7 @@ impl DescCompilation {
                     }
                 }
                 Spec::Collection(g) => {
-                    if let Err(e) = self.emit_group(elems, g, fields) {
-                        return Err(e);
-                    }
+                    self.emit_group(elems, g, fields)?
                 }
             }
         }
@@ -562,3 +635,6 @@ fn byte_literal(lit: u8) -> Pat {
         })),
     })
 }
+
+// TODO: Change `!` to never_type is in stable
+static EMPTY_TYPE: &str = "UnsupportedDescriptor";
