@@ -179,6 +179,7 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage", "X") | ("usage_min", "X") | ("usage_max", "X") => Some(0x30),
         ("usage", "Y") | ("usage_min", "Y") | ("usage_max", "Y") => Some(0x31),
         ("usage", "Z") | ("usage_min", "Z") | ("usage_max", "Z") => Some(0x32),
+        ("usage", "WHEEL") => Some(0x38),
 
         // LED usage_page usage ID's.
         ("usage", "NUM_LOCK") => Some(0x01),
