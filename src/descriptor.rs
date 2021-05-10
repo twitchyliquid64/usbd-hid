@@ -1,13 +1,13 @@
 //! Implements generation of HID report descriptors as well as common reports
-extern crate usbd_hid_macros;
 extern crate serde;
-use serde::ser::{Serialize, Serializer, SerializeTuple};
+extern crate usbd_hid_macros;
+use serde::ser::{Serialize, SerializeTuple, Serializer};
 
 pub use usbd_hid_macros::gen_hid_descriptor;
 
 /// Report types where serialized HID report descriptors are available.
 pub trait SerializedDescriptor {
-    fn desc() -> &'static[u8];
+    fn desc() -> &'static [u8];
 }
 
 /// Report types which serialize into input reports, ready for transmission.
@@ -15,9 +15,9 @@ pub trait AsInputReport: Serialize {}
 
 /// Prelude for modules which use the `gen_hid_descriptor` macro.
 pub mod generator_prelude {
-    pub use usbd_hid_macros::gen_hid_descriptor;
-    pub use crate::descriptor::{SerializedDescriptor, AsInputReport};
+    pub use crate::descriptor::{AsInputReport, SerializedDescriptor};
     pub use serde::ser::{Serialize, SerializeTuple, Serializer};
+    pub use usbd_hid_macros::gen_hid_descriptor;
 }
 
 /// MouseReport describes a report and its companion descriptor than can be used
@@ -102,7 +102,7 @@ pub enum MediaKey {
     Play = 0xB0,
     Pause = 0xB1,
     Record = 0xB2,
-    NextTrack =0xB5,
+    NextTrack = 0xB5,
     PrevTrack = 0xB6,
     Stop = 0xB7,
     RandomPlay = 0xB9,
@@ -112,8 +112,8 @@ pub enum MediaKey {
     VolumeDecrement = 0xEA,
 }
 
-impl Into<u16> for MediaKey {
-    fn into(self) -> u16 {
-        self as u16
+impl From<MediaKey> for u16 {
+    fn from(mk: MediaKey) -> u16 {
+        mk as u16
     }
 }
