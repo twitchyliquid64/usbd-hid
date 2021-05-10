@@ -27,8 +27,8 @@ const HID_REQ_SET_REPORT: u8 = 0x09;
 /// and unpack reports which are read or staged for transmission.
 pub struct HIDClass<'a, B: UsbBus> {
     if_num: InterfaceNumber,
-    out_ep: EndpointOut<'a, B>,
-    in_ep: EndpointIn<'a, B>,
+    out_ep: Option<EndpointOut<'a, B>>,
+    in_ep: Option<EndpointIn<'a, B>>,
     report_descriptor: &'static [u8],
 }
 
@@ -39,6 +39,10 @@ impl<B: UsbBus> HIDClass<'_, B> {
     /// HID reports. A lower value means better throughput & latency, at the expense
     /// of CPU on the device & bandwidth on the bus. A value of 10 is reasonable for
     /// high performance uses, and a value of 255 is good for best-effort usecases.
+    ///
+    /// This allocates two endpoints (IN and OUT).
+    /// See new_ep_in (IN endpoint only) and new_ep_out (OUT endpoint only) to only create a single
+    /// endpoint.
     pub fn new<'a>(
         alloc: &'a UsbBusAllocator<B>,
         report_descriptor: &'static [u8],
@@ -46,8 +50,38 @@ impl<B: UsbBus> HIDClass<'_, B> {
     ) -> HIDClass<'a, B> {
         HIDClass {
             if_num: alloc.interface(),
-            out_ep: alloc.interrupt(64, poll_ms),
-            in_ep: alloc.interrupt(64, poll_ms),
+            out_ep: Some(alloc.interrupt(64, poll_ms)),
+            in_ep: Some(alloc.interrupt(64, poll_ms)),
+            report_descriptor,
+        }
+    }
+
+    /// Creates a new HIDClass with the provided UsbBus & HID report descriptor.
+    /// See new() for more details.
+    pub fn new_ep_in<'a>(
+        alloc: &'a UsbBusAllocator<B>,
+        report_descriptor: &'static [u8],
+        poll_ms: u8,
+    ) -> HIDClass<'a, B> {
+        HIDClass {
+            if_num: alloc.interface(),
+            out_ep: None,
+            in_ep: Some(alloc.interrupt(64, poll_ms)),
+            report_descriptor,
+        }
+    }
+
+    /// Creates a new HIDClass with the provided UsbBus & HID report descriptor.
+    /// See new() for more details.
+    pub fn new_ep_out<'a>(
+        alloc: &'a UsbBusAllocator<B>,
+        report_descriptor: &'static [u8],
+        poll_ms: u8,
+    ) -> HIDClass<'a, B> {
+        HIDClass {
+            if_num: alloc.interface(),
+            out_ep: Some(alloc.interrupt(64, poll_ms)),
+            in_ep: None,
             report_descriptor,
         }
     }
@@ -56,12 +90,16 @@ impl<B: UsbBus> HIDClass<'_, B> {
     /// A BufferOverflow error is returned if the serialized report is greater than
     /// 64 bytes in size.
     pub fn push_input<IR: AsInputReport>(&self, r: &IR) -> Result<usize> {
-        let mut buff: [u8; 64] = [0; 64];
-        let size = match serialize(&mut buff, r) {
-            Ok(l) => l,
-            Err(_) => return Err(UsbError::BufferOverflow),
-        };
-        self.in_ep.write(&buff[0..size])
+        if let Some(ep) = &self.in_ep {
+            let mut buff: [u8; 64] = [0; 64];
+            let size = match serialize(&mut buff, r) {
+                Ok(l) => l,
+                Err(_) => return Err(UsbError::BufferOverflow),
+            };
+            ep.write(&buff[0..size])
+        } else {
+            Err(UsbError::InvalidEndpoint)
+        }
     }
 
     /// Tries to write an input (device-to-host) report from the given raw bytes.
@@ -69,14 +107,22 @@ impl<B: UsbBus> HIDClass<'_, B> {
     /// were used in the descriptor, the report ID corresponding to this report
     /// must be be present before the contents of the report.
     pub fn push_raw_input(&self, data: &[u8]) -> Result<usize> {
-        self.in_ep.write(data)
+        if let Some(ep) = &self.in_ep {
+            ep.write(data)
+        } else {
+            Err(UsbError::InvalidEndpoint)
+        }
     }
 
     /// Tries to read an output (host-to-device) report as raw bytes. Data
     /// is expected to be sized appropriately to contain any valid HID report
     /// for OUTPUT items, including the report ID prefix if report IDs are used.
     pub fn pull_raw_output(&self, data: &mut [u8]) -> Result<usize> {
-        self.out_ep.read(data)
+        if let Some(ep) = &self.out_ep {
+            ep.read(data)
+        } else {
+            Err(UsbError::InvalidEndpoint)
+        }
     }
 }
 
@@ -108,8 +154,12 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
             ],
         )?;
 
-        writer.endpoint(&self.out_ep)?;
-        writer.endpoint(&self.in_ep)?;
+        if let Some(ep) = &self.out_ep {
+            writer.endpoint(&ep)?;
+        }
+        if let Some(ep) = &self.in_ep {
+            writer.endpoint(&ep)?;
+        }
         Ok(())
     }
 
