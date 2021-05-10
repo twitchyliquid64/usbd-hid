@@ -39,12 +39,16 @@ impl<B: UsbBus> HIDClass<'_, B> {
     /// HID reports. A lower value means better throughput & latency, at the expense
     /// of CPU on the device & bandwidth on the bus. A value of 10 is reasonable for
     /// high performance uses, and a value of 255 is good for best-effort usecases.
-    pub fn new<'a>(alloc: &'a UsbBusAllocator<B>, report_descriptor: &'static [u8], poll_ms: u8) -> HIDClass<'a, B> {
+    pub fn new<'a>(
+        alloc: &'a UsbBusAllocator<B>,
+        report_descriptor: &'static [u8],
+        poll_ms: u8,
+    ) -> HIDClass<'a, B> {
         HIDClass {
             if_num: alloc.interface(),
             out_ep: alloc.interrupt(64, poll_ms),
             in_ep: alloc.interrupt(64, poll_ms),
-            report_descriptor: report_descriptor,
+            report_descriptor,
         }
     }
 
@@ -82,14 +86,16 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
             self.if_num,
             USB_CLASS_HID,
             USB_SUBCLASS_NONE,
-            USB_PROTOCOL_NONE)?;
+            USB_PROTOCOL_NONE,
+        )?;
 
         // HID descriptor
         writer.write(
             HID_DESC_DESCTYPE_HID,
             &[
                 // HID Class spec version
-                HID_DESC_SPEC_1_10[0], HID_DESC_SPEC_1_10[1],
+                HID_DESC_SPEC_1_10[0],
+                HID_DESC_SPEC_1_10[1],
                 // Country code not supported
                 HID_DESC_COUNTRY_UNSPEC,
                 // Number of following descriptors
@@ -97,8 +103,10 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                 // We have a HID report descriptor the host should read
                 HID_DESC_DESCTYPE_HID_REPORT,
                 // HID report descriptor size,
-                (self.report_descriptor.len() & 0xFF) as u8, (self.report_descriptor.len()>>8 & 0xFF) as u8,
-            ])?;
+                (self.report_descriptor.len() & 0xFF) as u8,
+                (self.report_descriptor.len() >> 8 & 0xFF) as u8,
+            ],
+        )?;
 
         writer.endpoint(&self.out_ep)?;
         writer.endpoint(&self.in_ep)?;
@@ -116,10 +124,10 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
 
         match (req.request_type, req.request) {
             (control::RequestType::Standard, control::Request::GET_DESCRIPTOR) => {
-                match (req.value>>8) as u8 {
+                match (req.value >> 8) as u8 {
                     HID_DESC_DESCTYPE_HID_REPORT => {
                         xfer.accept_with_static(self.report_descriptor).ok();
-                    },
+                    }
                     HID_DESC_DESCTYPE_HID => {
                         let buf = &[
                             // Length of buf inclusive of size prefix
@@ -127,7 +135,8 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                             // Descriptor type
                             HID_DESC_DESCTYPE_HID,
                             // HID Class spec version
-                            HID_DESC_SPEC_1_10[0], HID_DESC_SPEC_1_10[1],
+                            HID_DESC_SPEC_1_10[0],
+                            HID_DESC_SPEC_1_10[1],
                             // Country code not supported
                             HID_DESC_COUNTRY_UNSPEC,
                             // Number of following descriptors
@@ -135,20 +144,21 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                             // We have a HID report descriptor the host should read
                             HID_DESC_DESCTYPE_HID_REPORT,
                             // HID report descriptor size,
-                            (self.report_descriptor.len() & 0xFF) as u8, (self.report_descriptor.len()>>8 & 0xFF) as u8,
+                            (self.report_descriptor.len() & 0xFF) as u8,
+                            (self.report_descriptor.len() >> 8 & 0xFF) as u8,
                         ];
                         xfer.accept_with(buf).ok();
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
-            },
+            }
             (control::RequestType::Class, HID_REQ_GET_REPORT) => {
                 xfer.reject().ok(); // Not supported for now
-            },
+            }
             (control::RequestType::Class, HID_REQ_GET_IDLE) => {
                 xfer.reject().ok(); // Not supported for now
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 
@@ -157,18 +167,22 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
         let req = xfer.request();
 
         // Bail out if its not relevant to our interface.
-        if !(req.recipient == control::Recipient::Interface && req.index == u8::from(self.if_num) as u16) {
+        if !(req.recipient == control::Recipient::Interface
+            && req.index == u8::from(self.if_num) as u16)
+        {
             return;
         }
 
         match req.request {
             HID_REQ_SET_IDLE => {
                 xfer.accept().ok();
-            },
+            }
             HID_REQ_SET_REPORT => {
                 xfer.reject().ok(); // Not supported for now
-            },
-            _ => { xfer.reject().ok(); }
+            }
+            _ => {
+                xfer.reject().ok();
+            }
         }
     }
 }

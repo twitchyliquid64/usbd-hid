@@ -5,16 +5,15 @@
 //! and communicating with a host that implements USB HID.
 #![no_std]
 
-
 pub use usb_device::{Result, UsbError};
-pub mod hid_class;
 pub mod descriptor;
+pub mod hid_class;
 
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
     use crate::descriptor::generator_prelude::*;
-    use crate::descriptor::{ KeyboardReport, MouseReport };
+    use crate::descriptor::{KeyboardReport, MouseReport};
 
     // This should generate this descriptor:
     // 0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
@@ -40,7 +39,6 @@ mod tests {
         f1: u8,
         f2: u16,
     }
-
 
     #[test]
     fn test_custom_unsigned() {
@@ -80,9 +78,9 @@ mod tests {
     #[test]
     fn test_custom_signed() {
         let expected = &[
-            6u8, 0u8, 255u8, 9u8, 1u8, 161u8, 1u8, 23u8, 129u8, 255u8, 255u8, 255u8, 37u8, 127u8, 117u8, 8u8,
-            149u8, 1u8, 129u8, 2u8, 23u8, 1u8, 128u8, 255u8, 255u8, 38u8, 255u8, 127u8, 117u8, 16u8, 145u8, 2u8,
-            192u8,
+            6u8, 0u8, 255u8, 9u8, 1u8, 161u8, 1u8, 23u8, 129u8, 255u8, 255u8, 255u8, 37u8, 127u8,
+            117u8, 8u8, 149u8, 1u8, 129u8, 2u8, 23u8, 1u8, 128u8, 255u8, 255u8, 38u8, 255u8, 127u8,
+            117u8, 16u8, 145u8, 2u8, 192u8,
         ];
         assert_eq!(CustomUnarySignedFrame::desc()[0..32], expected[0..32]);
     }
@@ -104,7 +102,7 @@ mod tests {
     #[test]
     fn test_custom_reports() {
         let expected: &[u8] = &[
-            133, 1, 21, 0, 38, 255, 0, 117, 8, 149, 1, 129, 2, 133, 2, 129, 2
+            133, 1, 21, 0, 38, 255, 0, 117, 8, 149, 1, 129, 2, 133, 2, 129, 2,
         ];
         assert_eq!(CustomMultiReport::desc(), expected);
     }
@@ -132,11 +130,10 @@ mod tests {
     #[test]
     fn test_array() {
         let expected: &[u8] = &[
-            6, 0, 255, 9, 1, 161, 1, 21, 0, 38, 255, 0, 117, 8, 149, 32, 129, 2, 192
+            6, 0, 255, 9, 1, 161, 1, 21, 0, 38, 255, 0, 117, 8, 149, 32, 129, 2, 192,
         ];
         assert_eq!(CustomArray::desc(), expected);
     }
-
 
     #[gen_hid_descriptor(
         (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
@@ -150,12 +147,11 @@ mod tests {
         f1: u8,
     }
 
-
     #[test]
     fn test_custom_const() {
         let expected = &[
-            6u8, 0u8, 255u8, 9u8, 1u8, 161u8, 1u8, 25u8, 1u8, 41u8, 3u8, 21u8, 0u8,
-            38u8, 255u8, 0u8, 117u8, 8u8, 149u8, 1u8, 129u8, 6u8, 192u8,
+            6u8, 0u8, 255u8, 9u8, 1u8, 161u8, 1u8, 25u8, 1u8, 41u8, 3u8, 21u8, 0u8, 38u8, 255u8,
+            0u8, 117u8, 8u8, 149u8, 1u8, 129u8, 6u8, 192u8,
         ];
         assert_eq!(CustomConst::desc(), expected);
     }
@@ -194,21 +190,20 @@ mod tests {
     #[test]
     fn test_custom_packed_bits() {
         let expected = &[
-            133u8, 1u8, 21u8, 0u8, 37u8, 1u8, 117u8, 1u8, 149u8, 3u8, 129u8, 2u8,
-            149u8, 5u8, 129u8, 3u8, 149u8, 9u8, 129u8, 2u8, 149u8, 7u8, 129u8, 3u8,
-            149u8, 20u8, 129u8, 2u8, 149u8, 4u8, 129u8, 3u8,
+            133u8, 1u8, 21u8, 0u8, 37u8, 1u8, 117u8, 1u8, 149u8, 3u8, 129u8, 2u8, 149u8, 5u8,
+            129u8, 3u8, 149u8, 9u8, 129u8, 2u8, 149u8, 7u8, 129u8, 3u8, 149u8, 20u8, 129u8, 2u8,
+            149u8, 4u8, 129u8, 3u8,
         ];
         assert_eq!(CustomPackedBits::desc(), expected);
     }
 
-
     #[test]
     fn test_mouse_descriptor() {
         let expected = &[
-            5u8, 1u8, 9u8, 2u8, 161u8, 1u8, 9u8, 1u8, 161u8, 0u8, 5u8, 9u8, 25u8, 1u8,
-            41u8, 3u8, 21u8, 0u8, 37u8, 1u8, 117u8, 1u8, 149u8, 3u8, 129u8, 2u8, 149u8,
-            5u8, 129u8, 3u8, 5u8, 1u8, 9u8, 48u8, 23u8, 129u8, 255u8, 255u8, 255u8, 37u8,
-            127u8, 117u8, 8u8, 149u8, 1u8, 129u8, 6u8, 9u8, 49u8, 129u8, 6u8, 192u8, 192u8,
+            5u8, 1u8, 9u8, 2u8, 161u8, 1u8, 9u8, 1u8, 161u8, 0u8, 5u8, 9u8, 25u8, 1u8, 41u8, 3u8,
+            21u8, 0u8, 37u8, 1u8, 117u8, 1u8, 149u8, 3u8, 129u8, 2u8, 149u8, 5u8, 129u8, 3u8, 5u8,
+            1u8, 9u8, 48u8, 23u8, 129u8, 255u8, 255u8, 255u8, 37u8, 127u8, 117u8, 8u8, 149u8, 1u8,
+            129u8, 6u8, 9u8, 49u8, 129u8, 6u8, 192u8, 192u8,
         ];
         assert_eq!(MouseReport::desc()[0..32], expected[0..32]);
     }
@@ -216,36 +211,32 @@ mod tests {
     #[test]
     fn test_keyboard_descriptor() {
         let expected = &[
-            0x05, 0x01,       // Usage Page (Generic Desktop)
-            0x09, 0x06,       // Usage (Keyboard)
-            0xa1, 0x01,       // Collection (Application)
-
-            0x05, 0x07,       // Usage Page (Key Codes)
-            0x19, 0xe0,       // Usage Minimum (224)
-            0x29, 0xe7,       // Usage Maximum (231)
-            0x15, 0x00,       // Logical Minimum (0)
-            0x25, 0x01,       // Logical Maximum (1)
-            0x75, 0x01,       // Report Size (1)
-            0x95, 0x08,       // Report count (8)
-            0x81, 0x02,       // Input (Data, Variable, Absolute)
-
-            0x05, 0x08,       // Usage Page (LEDs)
-            0x19, 0x01,       // Usage Minimum (1)
-            0x29, 0x05,       // Usage Maximum (5)
-            0x95, 0x05,       // Report Count (5)
-            0x91, 0x02,       // Output (Data, Variable, Absolute)
-            0x95, 0x03,       // Report Count (3)
-            0x91, 0x03,       // Output (Constant, Variable, Absolute)
-
-            0x05, 0x07,       // Usage Page (Key Codes)
-            0x19, 0x00,       // Usage Minimum (0)
-            0x29, 0x65,       // Usage Maximum (101)
+            0x05, 0x01, // Usage Page (Generic Desktop)
+            0x09, 0x06, // Usage (Keyboard)
+            0xa1, 0x01, // Collection (Application)
+            0x05, 0x07, // Usage Page (Key Codes)
+            0x19, 0xe0, // Usage Minimum (224)
+            0x29, 0xe7, // Usage Maximum (231)
+            0x15, 0x00, // Logical Minimum (0)
+            0x25, 0x01, // Logical Maximum (1)
+            0x75, 0x01, // Report Size (1)
+            0x95, 0x08, // Report count (8)
+            0x81, 0x02, // Input (Data, Variable, Absolute)
+            0x05, 0x08, // Usage Page (LEDs)
+            0x19, 0x01, // Usage Minimum (1)
+            0x29, 0x05, // Usage Maximum (5)
+            0x95, 0x05, // Report Count (5)
+            0x91, 0x02, // Output (Data, Variable, Absolute)
+            0x95, 0x03, // Report Count (3)
+            0x91, 0x03, // Output (Constant, Variable, Absolute)
+            0x05, 0x07, // Usage Page (Key Codes)
+            0x19, 0x00, // Usage Minimum (0)
+            0x29, 0x65, // Usage Maximum (101)
             0x26, 0xFF, 0x00, // Logical Maximum (255)
-            0x75, 0x08,       // Report Size (8)
-            0x95, 0x06,       // Report Count (6)
-            0x81, 0x00,       // Input (Data, Array, Absolute)
-
-            0xc0,             // End Collection
+            0x75, 0x08, // Report Size (8)
+            0x95, 0x06, // Report Count (6)
+            0x81, 0x00, // Input (Data, Array, Absolute)
+            0xc0, // End Collection
         ];
         assert_eq!(KeyboardReport::desc()[0..51], expected[0..51]);
     }

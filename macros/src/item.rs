@@ -144,5 +144,5 @@ pub fn field_decl(fields: &Fields, name: String) -> Field {
             return field.clone();
         }
     }
-    panic!(format!("internal error: could not find field {} which should exist", name))
+    panic!("internal error: could not find field {} which should exist", name)
 }
