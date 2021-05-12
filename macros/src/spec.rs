@@ -45,6 +45,7 @@ pub struct GroupSpec {
     pub report_id: Option<u32>,
     pub usage_page: Option<u32>,
     pub collection: Option<u32>,
+    pub logical_min: Option<u32>,
 
     // Local items
     pub usage: Vec<u32>,
@@ -119,6 +120,10 @@ impl GroupSpec {
                 self.usage_max = Some(val);
                 Ok(())
             }
+            "logical_min" => {
+                self.logical_min = Some(val);
+                Ok(())
+            }
             _ => Err(parse::Error::new(
                 input.span(),
                 format!(
@@ -180,6 +185,7 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage", "Y") | ("usage_min", "Y") | ("usage_max", "Y") => Some(0x31),
         ("usage", "Z") | ("usage_min", "Z") | ("usage_max", "Z") => Some(0x32),
         ("usage", "WHEEL") => Some(0x38),
+        ("usage", "SYSTEM_CONTROL") => Some(0x80),
 
         // LED usage_page usage ID's.
         ("usage", "NUM_LOCK") => Some(0x01),
