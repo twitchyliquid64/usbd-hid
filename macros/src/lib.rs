@@ -521,6 +521,16 @@ impl DescCompilation {
                 false,
             );
         }
+        if let Some(logical_minimum) = spec.logical_min {
+            self.emit_item(
+                elems,
+                ItemType::Main.into(),
+                GlobalItemKind::LogicalMin.into(),
+                logical_minimum as isize,
+                false,
+                false,
+            );
+        }
 
         for name in spec.clone() {
             let f = spec.get(name.clone()).unwrap();
