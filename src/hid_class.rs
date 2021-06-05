@@ -155,10 +155,10 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
         )?;
 
         if let Some(ep) = &self.out_ep {
-            writer.endpoint(&ep)?;
+            writer.endpoint(ep)?;
         }
         if let Some(ep) = &self.in_ep {
-            writer.endpoint(&ep)?;
+            writer.endpoint(ep)?;
         }
         Ok(())
     }

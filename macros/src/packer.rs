@@ -58,9 +58,12 @@ pub fn gen_serializer(fields: Vec<ReportUnaryField>, typ: MainItemKind) -> Resul
             8 => { // u8 / i8
                 if field.descriptor_item.report_count == 1 {
                     elems.push(make_unary_serialize_invocation(8, field.ident.clone(), signed));
-                } else {
+                } else if field.descriptor_item.report_count <= 32 {
                     let ident = field.ident.clone();
                     elems.push(quote!({ s.serialize_element(&self.#ident)?; }));
+                } else {
+                    // XXX - don't attempt to serialize arrays larger than 32
+                    //       (not supported by serde, yet)
                 }
                 Ok(())
             },
