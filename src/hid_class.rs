@@ -46,6 +46,7 @@ const HID_REQ_SET_REPORT: u8 = 0x09;
 const CONTROL_BUF_LEN: usize = 128;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ReportType {
     Input = 1,
     Output = 2,
@@ -65,12 +66,14 @@ impl From<u8> for ReportType {
 }
 
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ReportInfo {
     pub report_type: ReportType,
     pub report_id: u8,
     pub len: usize,
 }
 
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 struct Report {
     info: ReportInfo,
     buf: [u8; CONTROL_BUF_LEN],
@@ -79,6 +82,7 @@ struct Report {
 /// List of official USB HID country codes
 /// See (6.2.1): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum HidCountryCode {
     NotSupported = 0,
@@ -124,6 +128,7 @@ pub enum HidCountryCode {
 /// Boot mode descriptors are fixed and must follow a strict format.
 /// See (Appendix F): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum HidSubClass {
     NoSubClass = 0,
@@ -134,6 +139,7 @@ pub enum HidSubClass {
 /// Only used if HidSubClass::Boot(1) is set
 /// See (4.3): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum HidProtocol {
     Generic = 0,
@@ -144,6 +150,7 @@ pub enum HidProtocol {
 /// Get/Set Protocol mapping
 /// See (7.2.5 and 7.2.6): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum HidProtocolMode {
     Boot = 0,
@@ -165,6 +172,7 @@ impl From<u8> for HidProtocolMode {
 /// compatible keyboards. Mice that support boot mode are not common and generally only useful for
 /// legacy OSs.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ProtocolModeConfig {
     /// Allows the host to define boot or report mode. Defaults to report mode.
     DefaultBehavior,
@@ -178,6 +186,7 @@ pub enum ProtocolModeConfig {
 /// Most commonly used to setup Boot Mode (6KRO) or Report Mode (NKRO) keyboards.
 /// Some OSs will also respect the HID locale setting of the keyboard to help choose the OS
 /// keyboard layout.
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct HidClassSettings {
     pub subclass: HidSubClass,
     pub protocol: HidProtocol,
