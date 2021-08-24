@@ -107,6 +107,7 @@ pub struct MediaKeyboardReport {
 #[non_exhaustive]
 #[repr(u16)]
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum MediaKey {
     Zero = 0x00,
     Play = 0xB0,
@@ -155,6 +156,7 @@ pub struct SystemControlReport {
 #[non_exhaustive]
 #[repr(u8)]
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SystemControlKey {
     PowerDown = 0x81,
     Sleep = 0x82,
