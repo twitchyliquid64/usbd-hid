@@ -214,6 +214,7 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage", "MICROPHONE") => Some(0x04),
         ("usage", "HEADPHONE") => Some(0x05),
         ("usage", "GRAPHIC_EQUALIZER") => Some(0x06),
+        ("usage", "AC_PAN") => Some(0x0238),
 
         (_, _) => None,
     }
