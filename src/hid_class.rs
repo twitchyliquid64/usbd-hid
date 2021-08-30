@@ -14,31 +14,31 @@ const HID_DESC_DESCTYPE_HID_REPORT: u8 = 0x22;
 const HID_DESC_SPEC_1_10: [u8; 2] = [0x10, 0x01];
 
 /// Requests the set idle rate from the device
-/// See (7.2.3): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.3): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 const HID_REQ_GET_IDLE: u8 = 0x02;
 
 /// Requests device to not send a particular report until a new event occurs
 /// or the specified amount of time passes.
-/// See (7.2.4): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.4): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 const HID_REQ_SET_IDLE: u8 = 0x0a;
 
 /// Requests the active protocol on the device (boot or report)
-/// See (7.2.5): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.5): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 const HID_REQ_GET_PROTOCOL: u8 = 0x03;
 
 /// Switches the device between boot and report protocols. Devices must default
 /// to report protocol, it is the reponsibility of the host to set the device
 /// to boot protocol (NOTE: Sadly many OSs, BIOSs and bootloaders do not adhere
 /// to the USB spec here).
-/// See (7.2.6): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.6): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 const HID_REQ_SET_PROTOCOL: u8 = 0x0b;
 
 /// Allows a host to receive a report via the Control pipe
-/// See (7.2.1): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.1): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 const HID_REQ_GET_REPORT: u8 = 0x01;
 
 /// Allows the host to send a report to the device via the Control pipe
-/// See (7.2.2): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.2): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 const HID_REQ_SET_REPORT: u8 = 0x09;
 
 /// See CONTROL_BUF_LEN from usb-device.git src/control_pipe.rs
@@ -77,7 +77,7 @@ struct Report {
 }
 
 /// List of official USB HID country codes
-/// See (6.2.1): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (6.2.1): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum HidCountryCode {
@@ -120,9 +120,9 @@ pub enum HidCountryCode {
 }
 
 /// Used to enable Boot mode descriptors for Mouse and Keyboard devices.
-/// See (4.2): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (4.2): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 /// Boot mode descriptors are fixed and must follow a strict format.
-/// See (Appendix F): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (Appendix F): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum HidSubClass {
@@ -132,7 +132,7 @@ pub enum HidSubClass {
 
 /// Defines fixed packet format
 /// Only used if HidSubClass::Boot(1) is set
-/// See (4.3): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (4.3): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum HidProtocol {
@@ -142,7 +142,7 @@ pub enum HidProtocol {
 }
 
 /// Get/Set Protocol mapping
-/// See (7.2.5 and 7.2.6): https://www.usb.org/sites/default/files/hid1_11.pdf
+/// See (7.2.5 and 7.2.6): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum HidProtocolMode {
@@ -208,7 +208,7 @@ pub struct HIDClass<'a, B: UsbBus> {
     in_ep: Option<EndpointIn<'a, B>>,
     report_descriptor: &'static [u8],
     /// Control endpoint alternative OUT buffer (always used for setting feature reports)
-    /// See: https://www.usb.org/sites/default/files/documents/hid1_11.pdf 7.2.1 and 7.2.2
+    /// See: <https://www.usb.org/sites/default/files/documents/hid1_11.pdf> 7.2.1 and 7.2.2
     set_report_buf: Option<Report>,
     /// Used only by Keyboard and Mouse to define BIOS (Boot) mode vs Normal (Report) mode.
     /// This is used to switch between 6KRO (boot) and NKRO (report) endpoints.
@@ -218,7 +218,7 @@ pub struct HIDClass<'a, B: UsbBus> {
     ///
     /// If a device does not request boot mode, this is a host bug. For convenience this API allows
     /// manually setting the protocol.
-    /// See https://www.usb.org/sites/default/files/hid1_11.pdf Section 7.2.6
+    /// See <https://www.usb.org/sites/default/files/hid1_11.pdf> Section 7.2.6
     protocol: Option<HidProtocolMode>,
     settings: HidClassSettings,
 }
@@ -471,7 +471,7 @@ impl<B: UsbBus> HIDClass<'_, B> {
 
     /// Retrieves the currently set device protocol
     /// This is equivalent to the USB HID GET_PROTOCOL request
-    /// See (7.2.5): https://www.usb.org/sites/default/files/hid1_11.pdf
+    /// See (7.2.5): <https://www.usb.org/sites/default/files/hid1_11.pdf>
     pub fn get_protocol_mode(&self) -> Result<HidProtocolMode> {
         // Protocol mode only has meaning if Keyboard or Mouse Protocol is set
         match self.settings.protocol {
@@ -491,7 +491,7 @@ impl<B: UsbBus> HIDClass<'_, B> {
     /// Forcibly sets the device protocol
     /// This is equivalent to the USB HID SET_PROTOCOL request.
     /// NOTE: If the OS does not support the new mode, the device may no longer work correctly.
-    /// See (7.2.6): https://www.usb.org/sites/default/files/hid1_11.pdf
+    /// See (7.2.6): <https://www.usb.org/sites/default/files/hid1_11.pdf>
     ///
     /// If either, ForceBoot or ForceReport are set in config, the mode argument is ignored.
     /// In addition, if ForceBoot or ForceReport are set, then any SET_PROTOCOL requests are also
