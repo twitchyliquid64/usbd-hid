@@ -151,7 +151,7 @@ use packer::{gen_serializer, uses_report_ids};
 ///
 /// ## `collection-spec`:
 ///
-/// ```
+/// ```text
 ///     (parameter = <constant or 0xxxx>, ...) = {
 ///         <collection-spec> OR <item-spec>;
 ///         ...

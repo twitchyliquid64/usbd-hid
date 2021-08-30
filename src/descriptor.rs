@@ -89,7 +89,7 @@ pub struct KeyboardReport {
 /// This is commonly used for sending media player for keyboards with media player
 /// keys, but can be used for all sorts of Consumer Page functionality.
 ///
-/// Reference: https://usb.org/sites/default/files/hut1_2.pdf
+/// Reference: <https://usb.org/sites/default/files/hut1_2.pdf>
 ///
 #[gen_hid_descriptor(
     (collection = APPLICATION, usage_page = CONSUMER, usage = CONSUMER_CONTROL) = {
@@ -133,7 +133,7 @@ impl From<MediaKey> for u16 {
 ///
 /// This is commonly used to enter sleep mode, power down, hibernate, etc.
 ///
-/// Reference: https://usb.org/sites/default/files/hut1_2.pdf
+/// Reference: <https://usb.org/sites/default/files/hut1_2.pdf>
 ///
 /// NOTE: For Windows compatibility usage_min should start at 0x81
 /// NOTE: For macOS scrollbar compatibility, logical minimum should start from 1
