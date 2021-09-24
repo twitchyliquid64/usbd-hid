@@ -1,0 +1,49 @@
+name: Release crates
+on:
+  workflow_dispatch:
+    inputs:
+      release_desc:
+        description: 'Release descriptor crate (yes/no)'
+        required: true
+        default: 'no'
+      release_macro:
+        description: 'Release macro crate (yes/no)'
+        required: true
+        default: 'yes'
+
+jobs:
+  release-crates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Rust
+        uses: hecrj/setup-rust-action@v1
+      - uses: actions/checkout@v2
+
+      - name: Login
+        run: cargo login ${CRATES_IO_TOKEN}
+        env:
+          CRATES_IO_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+
+      - name: Release descriptor crate
+        if: github.event.inputs.release_desc == 'yes'
+        shell: bash
+        run: |
+          set -ex
+          (cd "descriptors" && cargo publish );
+
+      - name: Release macro crate
+        if: github.event.inputs.release_macro == 'yes'
+        shell: bash
+        run: |
+          set -ex
+          (cd "macros" && cargo publish );
+
+      - name: Release usbd-hid crate
+        shell: bash
+        run: |
+          set -ex
+
+          # Install random crate to force update of the registry
+          cargo install lazy_static || true
+          
+          cargo publish
