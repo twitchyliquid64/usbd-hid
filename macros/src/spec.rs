@@ -3,13 +3,14 @@ extern crate usbd_hid_descriptors;
 use quote::quote;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{parse, Expr, ExprAssign, ExprPath, Path, Result, Token};
+use syn::{parse, Attribute, Expr, ExprAssign, ExprPath, Path, Result, Token};
 use syn::{Block, ExprBlock, ExprLit, ExprTuple, Lit, Stmt};
 
 use std::collections::HashMap;
 use std::string::String;
 use usbd_hid_descriptors::*;
 use syn::spanned::Spanned;
+use syn::visit::Visit;
 
 // Spec describes an item within a HID report.
 #[derive(Debug, Clone)]
@@ -339,7 +340,7 @@ fn maybe_parse_kv_lhs(field: Expr) -> Option<Vec<String>> {
     return None;
 }
 
-fn parse_item_attrs(attrs: Vec<syn::Attribute>) -> (Option<MainItemSetting>, Option<u16>, ItemQuirks) {
+fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u16>, ItemQuirks) {
     let mut out: MainItemSetting = MainItemSetting { 0: 0 };
     let mut had_settings: bool = false;
     let mut packed_bits: Option<u16> = None;
@@ -432,7 +433,7 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
     }
 
     // Decode item settings.
-    let item_settings = if let Expr::Assign(ExprAssign { attrs, .. }) = field.clone() {
+    let item_settings = if let Some(attrs) = AttributeCollector::all(&field) {
         parse_item_attrs(attrs)
     } else {
         (None, None, ItemQuirks::default())
@@ -454,6 +455,33 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
     }
 
     Some((name, val.unwrap(), item_settings.0, item_settings.1, item_settings.2))
+}
+
+struct AttributeCollector(Vec<Attribute>);
+
+impl <'ast> AttributeCollector {
+
+    fn new() -> Self {
+        Self(vec![])
+    }
+
+    /// Recursively finds all Attributes contained by an Expr.
+    /// Returns None when no attributes are found.
+    pub fn all(expr: &'ast Expr) -> Option<Vec<Attribute>> {
+        let mut visitor = Self::new();
+        visitor.visit_expr(expr);
+        if visitor.0.is_empty() {
+            None
+        } else {
+            Some(visitor.0)
+        }
+    }
+}
+
+impl <'ast> Visit<'ast> for AttributeCollector {
+    fn visit_attribute(&mut self, node: &'ast Attribute) {
+        self.0.push(node.to_owned());
+    }
 }
 
 impl Parse for GroupSpec {

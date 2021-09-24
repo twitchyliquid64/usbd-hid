@@ -19,5 +19,5 @@ serde = { version = "1.0", default-features = false }
 usbd-hid-descriptors = { path = "../descriptors", version = ">=0.1.1" }
 
 [dependencies.syn]
-features = ["extra-traits", "full"]
-version = "=1.0.75"
+features = ["extra-traits", "full", "visit"]
+version = "1.0"
