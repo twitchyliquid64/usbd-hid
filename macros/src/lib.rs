@@ -522,9 +522,12 @@ impl DescCompilation {
             );
         }
         if let Some(logical_minimum) = spec.logical_min {
+            // Set to 0 to indicate that we've already set the default
+            // See handle_globals
+            self.logical_minimum = Some(0);
             self.emit_item(
                 elems,
-                ItemType::Main.into(),
+                ItemType::Global.into(),
                 GlobalItemKind::LogicalMin.into(),
                 logical_minimum as isize,
                 false,
