@@ -118,6 +118,7 @@ pub enum MediaKey {
     RandomPlay = 0xB9,
     Repeat = 0xBC,
     PlayPause = 0xCD,
+    Mute = 0xE2,
     VolumeIncrement = 0xE9,
     VolumeDecrement = 0xEA,
 }
