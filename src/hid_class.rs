@@ -675,7 +675,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                     xfer.reject().ok();
                 } else {
                     let mut buf: [u8; CONTROL_BUF_LEN] = [0; CONTROL_BUF_LEN];
-                    buf.copy_from_slice(&xfer.data()[..len]);
+                    buf[..len].copy_from_slice(&xfer.data()[..len]);
 
                     // Overwrite previous buffer even if unused
                     self.set_report_buf = Some(Report {
