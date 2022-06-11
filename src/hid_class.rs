@@ -45,7 +45,7 @@ const HID_REQ_SET_REPORT: u8 = 0x09;
 /// Will need to revisit how this is set once usb-device has true HiSpeed USB support.
 const CONTROL_BUF_LEN: usize = 128;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ReportType {
     Input = 1,
     Output = 2,
@@ -64,7 +64,7 @@ impl From<u8> for ReportType {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct ReportInfo {
     pub report_type: ReportType,
     pub report_id: u8,
@@ -78,7 +78,7 @@ struct Report {
 
 /// List of official USB HID country codes
 /// See (6.2.1): <https://www.usb.org/sites/default/files/hid1_11.pdf>
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum HidCountryCode {
     NotSupported = 0,
@@ -123,7 +123,7 @@ pub enum HidCountryCode {
 /// See (4.2): <https://www.usb.org/sites/default/files/hid1_11.pdf>
 /// Boot mode descriptors are fixed and must follow a strict format.
 /// See (Appendix F): <https://www.usb.org/sites/default/files/hid1_11.pdf>
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum HidSubClass {
     NoSubClass = 0,
@@ -133,7 +133,7 @@ pub enum HidSubClass {
 /// Defines fixed packet format
 /// Only used if HidSubClass::Boot(1) is set
 /// See (4.3): <https://www.usb.org/sites/default/files/hid1_11.pdf>
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum HidProtocol {
     Generic = 0,
@@ -143,7 +143,7 @@ pub enum HidProtocol {
 
 /// Get/Set Protocol mapping
 /// See (7.2.5 and 7.2.6): <https://www.usb.org/sites/default/files/hid1_11.pdf>
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum HidProtocolMode {
     Boot = 0,
@@ -164,7 +164,7 @@ impl From<u8> for HidProtocolMode {
 /// bugs. Forcing either Boot mode (6KRO) and Report mode (NKRO) are often necessary for NKRO
 /// compatible keyboards. Mice that support boot mode are not common and generally only useful for
 /// legacy OSs.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ProtocolModeConfig {
     /// Allows the host to define boot or report mode. Defaults to report mode.
     DefaultBehavior,
@@ -456,7 +456,7 @@ impl<B: UsbBus> HIDClass<'_, B> {
                 }
 
                 // Copy buffer
-                data.copy_from_slice(&set_report_buf.buf);
+                data[..info.len].copy_from_slice(&set_report_buf.buf[..info.len]);
                 info
             }
             None => {
