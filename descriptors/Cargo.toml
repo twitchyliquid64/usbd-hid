@@ -6,7 +6,7 @@ keywords = ["no-std", "hid"]
 license = "MIT OR Apache-2.0"
 name = "usbd-hid-descriptors"
 version = "0.1.2"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-bitfield = "~0.13"
+bitfield = "~0.14"

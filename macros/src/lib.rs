@@ -49,7 +49,7 @@ use packer::{gen_serializer, uses_report_ids};
 ///
 /// - Custom 32-octet array, sent from device to host
 ///
-/// ``` no_run
+/// ```ignore
 /// #[gen_hid_descriptor(
 ///     (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
 ///         buff=input;
@@ -62,7 +62,7 @@ use packer::{gen_serializer, uses_report_ids};
 ///
 /// - Custom input / output, sent in either direction
 ///
-/// ``` no_run
+/// ```ignore
 /// #[gen_hid_descriptor(
 ///     (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
 ///         input_buffer=input;
@@ -80,7 +80,7 @@ use packer::{gen_serializer, uses_report_ids};
 ///
 /// - Packed bitfields
 ///
-/// ``` no_run
+/// ```ignore
 /// #[gen_hid_descriptor(
 ///     (report_id = 0x01,) = {
 ///         #[packed_bits 3] f1=input;
@@ -101,7 +101,7 @@ use packer::{gen_serializer, uses_report_ids};
 ///
 /// - Customizing the settings on a report item
 ///
-/// ``` no_run
+/// ```ignore
 /// #[gen_hid_descriptor(
 ///     (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
 ///         (usage_min = X, usage_max = Y) = {
@@ -140,7 +140,7 @@ use packer::{gen_serializer, uses_report_ids};
 /// The parameters of the HID descriptor should be provided as arguments to the attribute.
 /// The arguments should follow the basic form:
 ///
-/// ```
+/// ```ignore
 /// #[gen_hid_descriptor(
 ///     <collection-spec> OR <item-spec>;
 ///     <collection-spec> OR <item-spec>;
@@ -173,7 +173,7 @@ use packer::{gen_serializer, uses_report_ids};
 ///
 /// ## `item-spec`:
 ///
-/// ```
+/// ```ignore
 ///     #[packed_bits <num_items>] #[item_settings <setting>,...] <fieldname>=input OR output;
 /// ```
 ///
@@ -205,7 +205,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     let ident = decl.ident.clone();
 
     // Error if the struct doesn't name its fields.
-    match decl.clone().fields {
+    match decl.fields {
         Fields::Named(_) => (),
         _ => {
             return parse::Error::new(
@@ -269,15 +269,12 @@ fn compile_descriptor(
         ..Default::default()
     };
     let mut elems = Punctuated::new();
-
-    if let Err(e) = compiler.emit_group(&mut elems, &spec, fields) {
-        return Err(e);
-    };
+    compiler.emit_group(&mut elems, &spec, fields)?;
 
     Ok((
         PatSlice {
             attrs: vec![],
-            elems: elems,
+            elems,
             bracket_token: Bracket {
                 span: Span::call_site(),
             },
@@ -359,34 +356,35 @@ impl DescCompilation {
         self.emit(elems, &mut prefix, buf, signed);
     }
 
-    fn handle_globals(&mut self, elems: &mut Punctuated<Pat, syn::token::Comma>, item: MainItem, quirks: ItemQuirks) {
-        if self.logical_minimum.is_none()
-            || self.logical_minimum.clone().unwrap() != item.logical_minimum
-        {
+    fn handle_globals(
+        &mut self,
+        elems: &mut Punctuated<Pat, syn::token::Comma>,
+        item: MainItem,
+        quirks: ItemQuirks,
+    ) {
+        if self.logical_minimum.is_none() || self.logical_minimum.unwrap() != item.logical_minimum {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
                 GlobalItemKind::LogicalMin.into(),
-                item.logical_minimum as isize,
+                item.logical_minimum,
                 true,
                 quirks.allow_short_form,
             );
             self.logical_minimum = Some(item.logical_minimum);
         }
-        if self.logical_maximum.is_none()
-            || self.logical_maximum.clone().unwrap() != item.logical_maximum
-        {
+        if self.logical_maximum.is_none() || self.logical_maximum.unwrap() != item.logical_maximum {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
                 GlobalItemKind::LogicalMax.into(),
-                item.logical_maximum as isize,
+                item.logical_maximum,
                 true,
                 quirks.allow_short_form,
             );
             self.logical_maximum = Some(item.logical_maximum);
         }
-        if self.report_size.is_none() || self.report_size.clone().unwrap() != item.report_size {
+        if self.report_size.is_none() || self.report_size.unwrap() != item.report_size {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -397,7 +395,7 @@ impl DescCompilation {
             );
             self.report_size = Some(item.report_size);
         }
-        if self.report_count.is_none() || self.report_count.clone().unwrap() != item.report_count {
+        if self.report_count.is_none() || self.report_count.unwrap() != item.report_count {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -437,9 +435,9 @@ impl DescCompilation {
                 report_count: padding,
                 ..item
             };
-            self.handle_globals(elems, padding.clone(), i.quirks);
+            self.handle_globals(elems, padding, i.quirks);
 
-            let mut const_settings = MainItemSetting { 0: 0 };
+            let mut const_settings = MainItemSetting(0);
             const_settings.set_constant(true);
             const_settings.set_variable(true);
             self.emit_item(
@@ -549,14 +547,12 @@ impl DescCompilation {
                     }
                 }
                 Spec::Collection(g) => {
-                    if let Err(e) = self.emit_group(elems, g, fields) {
-                        return Err(e);
-                    }
+                    self.emit_group(elems, g, fields)?;
                 }
             }
         }
 
-        if let Some(_) = spec.collection {
+        if spec.collection.is_some() {
             // Close collection.
             elems.push(byte_literal(0xc0));
         }

@@ -5,8 +5,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse, Ident, Index, Result};
 
-use crate::spec::*;
 use crate::item::*;
+use crate::spec::*;
 
 use core::iter::Extend;
 
@@ -14,13 +14,13 @@ pub fn uses_report_ids(spec: &Spec) -> bool {
     match spec {
         Spec::MainItem(_) => false,
         Spec::Collection(c) => {
-            for (_, s) in &c.fields {
-                if uses_report_ids(&s) {
+            for s in c.fields.values() {
+                if uses_report_ids(s) {
                     return true;
                 }
             }
             c.report_id.is_some()
-        },
+        }
     }
 }
 
@@ -48,16 +48,25 @@ pub fn gen_serializer(fields: Vec<ReportUnaryField>, typ: MainItemKind) -> Resul
         let rc = match field.descriptor_item.report_size {
             1 => {
                 if field.descriptor_item.report_count == 1 {
-                    elems.push(make_unary_serialize_invocation(field.bit_width, field.ident.clone(), signed));
+                    elems.push(make_unary_serialize_invocation(
+                        field.bit_width,
+                        field.ident.clone(),
+                        signed,
+                    ));
                 } else {
                     let ident = field.ident.clone();
                     elems.push(quote!({ s.serialize_element(&self.#ident)?; }));
                 }
                 Ok(())
-            },
-            8 => { // u8 / i8
+            }
+            8 => {
+                // u8 / i8
                 if field.descriptor_item.report_count == 1 {
-                    elems.push(make_unary_serialize_invocation(8, field.ident.clone(), signed));
+                    elems.push(make_unary_serialize_invocation(
+                        8,
+                        field.ident.clone(),
+                        signed,
+                    ));
                 } else if field.descriptor_item.report_count <= 32 {
                     let ident = field.ident.clone();
                     elems.push(quote!({ s.serialize_element(&self.#ident)?; }));
@@ -66,23 +75,30 @@ pub fn gen_serializer(fields: Vec<ReportUnaryField>, typ: MainItemKind) -> Resul
                     //       (not supported by serde, yet)
                 }
                 Ok(())
-            },
-            16 | 32 => { // u16 / i16 / u32 / i32
+            }
+            16 | 32 => {
+                // u16 / i16 / u32 / i32
                 if field.descriptor_item.report_count == 1 {
-                    elems.push(make_unary_serialize_invocation(field.descriptor_item.report_size as usize, field.ident.clone(), signed));
+                    elems.push(make_unary_serialize_invocation(
+                        field.descriptor_item.report_size as usize,
+                        field.ident.clone(),
+                        signed,
+                    ));
                     Ok(())
                 } else {
-                    Err(parse::Error::new(field.ident.span(),"Arrays of 16/32bit fields not supported"))
+                    Err(parse::Error::new(
+                        field.ident.span(),
+                        "Arrays of 16/32bit fields not supported",
+                    ))
                 }
-            },
-            _ => Err(
-                parse::Error::new(field.ident.span(),"Unsupported report size for serialization")
-            )
+            }
+            _ => Err(parse::Error::new(
+                field.ident.span(),
+                "Unsupported report size for serialization",
+            )),
         };
 
-        if let Err(e) = rc {
-            return Err(e);
-        }
+        rc?;
     }
 
     let mut out = TokenStream::new();
