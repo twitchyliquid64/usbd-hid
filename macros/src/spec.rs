@@ -8,9 +8,9 @@ use syn::{Block, ExprBlock, ExprLit, ExprTuple, Lit, Stmt};
 
 use std::collections::HashMap;
 use std::string::String;
-use usbd_hid_descriptors::*;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
+use usbd_hid_descriptors::*;
 
 // Spec describes an item within a HID report.
 #[derive(Debug, Clone)]
@@ -74,10 +74,9 @@ impl GroupSpec {
                 name.clone(),
                 Spec::MainItem(ItemSpec {
                     kind: item_kind,
-                    settings: settings,
+                    settings,
                     want_bits: bits,
-                    quirks: quirks,
-                    ..Default::default()
+                    quirks,
                 }),
             );
             self.field_order.push(name);
@@ -264,7 +263,7 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
                                 input.span(),
                                 format!(
                                     "`#[gen_hid_descriptor]` unrecognized constant: {}",
-                                    quote! { #segments }.to_string()
+                                    quote! { #segments }
                                 ),
                             ));
                         }
@@ -277,7 +276,7 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
             }
         }
     }
-    if collection_attrs.len() == 0 {
+    if collection_attrs.is_empty() {
         return Err(parse::Error::new(
             input.span(),
             "`#[gen_hid_descriptor]` group spec lhs must contain value pairs",
@@ -287,9 +286,7 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
         ..Default::default()
     };
     for (key, val) in collection_attrs {
-        if let Err(e) = out.try_set_attr(input, key, val) {
-            return Err(e);
-        }
+        out.try_set_attr(input, key, val)?;
     }
 
     // Match out the item kind on the right of the equals.
@@ -301,13 +298,9 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
         {
             for stmt in stmts {
                 if let Stmt::Expr(e) = stmt {
-                    if let Err(e) = out.from_field(input, e) {
-                        return Err(e);
-                    }
+                    out.from_field(input, e)?;
                 } else if let Stmt::Semi(e, _) = stmt {
-                    if let Err(e) = out.from_field(input, e) {
-                        return Err(e);
-                    }
+                    out.from_field(input, e)?;
                 } else {
                     return Err(parse::Error::new(input.span(), "`#[gen_hid_descriptor]` group spec body can only contain semicolon-separated fields"));
                 }
@@ -316,7 +309,7 @@ fn parse_group_spec(input: ParseStream, field: Expr) -> Result<GroupSpec> {
             return Err(parse::Error::new(
                 right.span(),
                 "`#[gen_hid_descriptor]` group spec rhs must be a block (did you miss a `,`)",
-            ))
+            ));
         };
     };
     Ok(out)
@@ -337,14 +330,16 @@ fn maybe_parse_kv_lhs(field: Expr) -> Option<Vec<String>> {
             return Some(out);
         }
     }
-    return None;
+    None
 }
 
 fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u16>, ItemQuirks) {
-    let mut out: MainItemSetting = MainItemSetting { 0: 0 };
+    let mut out: MainItemSetting = MainItemSetting(0);
     let mut had_settings: bool = false;
     let mut packed_bits: Option<u16> = None;
-    let mut quirks: ItemQuirks = ItemQuirks{ ..Default::default() };
+    let mut quirks: ItemQuirks = ItemQuirks {
+        ..Default::default()
+    };
 
     for attr in attrs {
         match attr.path.segments[0].ident.to_string().as_str() {
@@ -360,7 +355,7 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
                 if packed_bits.is_none() {
                     println!("WARNING!: bitfield attribute specified but failed to read number of bits from token!");
                 }
-            },
+            }
 
             "item_settings" => {
                 had_settings = true;
@@ -394,7 +389,7 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
                         }
                     }
                 }
-            },
+            }
 
             "quirks" => {
                 for setting in attr.tokens {
@@ -405,7 +400,7 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
                         }
                     }
                 }
-            },
+            }
 
             p => {
                 println!("WARNING: Unknown item attribute: {}", p);
@@ -420,7 +415,16 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
 }
 
 // maybe_parse_kv tries to parse an expression like 'blah=blah'.
-fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting>, Option<u16>, ItemQuirks)> {
+#[allow(clippy::type_complexity)]
+fn maybe_parse_kv(
+    field: Expr,
+) -> Option<(
+    String,
+    String,
+    Option<MainItemSetting>,
+    Option<u16>,
+    ItemQuirks,
+)> {
     // Match out the identifier on the left of the equals.
     let name: String;
     if let Some(lhs) = maybe_parse_kv_lhs(field.clone()) {
@@ -450,17 +454,20 @@ fn maybe_parse_kv(field: Expr) -> Option<(String, String, Option<MainItemSetting
             val = Some(segments[0].ident.clone().to_string());
         }
     };
-    if val.is_none() {
-        return None;
-    }
+    val.as_ref()?;
 
-    Some((name, val.unwrap(), item_settings.0, item_settings.1, item_settings.2))
+    Some((
+        name,
+        val.unwrap(),
+        item_settings.0,
+        item_settings.1,
+        item_settings.2,
+    ))
 }
 
 struct AttributeCollector(Vec<Attribute>);
 
-impl <'ast> AttributeCollector {
-
+impl<'ast> AttributeCollector {
     fn new() -> Self {
         Self(vec![])
     }
@@ -478,7 +485,7 @@ impl <'ast> AttributeCollector {
     }
 }
 
-impl <'ast> Visit<'ast> for AttributeCollector {
+impl<'ast> Visit<'ast> for AttributeCollector {
     fn visit_attribute(&mut self, node: &'ast Attribute) {
         self.0.push(node.to_owned());
     }
@@ -490,29 +497,28 @@ impl Parse for GroupSpec {
             ..Default::default()
         };
         let fields: Punctuated<Expr, Token![,]> = input.parse_terminated(Expr::parse)?;
-        if fields.len() == 0 {
+        if fields.is_empty() {
             return Err(parse::Error::new(
                 input.span(),
                 "`#[gen_hid_descriptor]` expected information about the HID report",
             ));
         }
         for field in fields {
-            if let Err(e) = out.from_field(input, field) {
-                return Err(e);
-            }
+            out.from_field(input, field)?;
         }
         Ok(out)
     }
 }
 
 impl GroupSpec {
+    #[allow(clippy::wrong_self_convention)]
     fn from_field(&mut self, input: ParseStream, field: Expr) -> Result<()> {
         if let Some(i) = maybe_parse_kv(field.clone()) {
             let (name, item_kind, settings, bits, quirks) = i;
             self.set_item(name, item_kind.into(), settings, bits, quirks);
             return Ok(());
         };
-        match parse_group_spec(input, field.clone()) {
+        match parse_group_spec(input, field) {
             Err(e) => return Err(e),
             Ok(g) => self.add_nested_group(g),
         };

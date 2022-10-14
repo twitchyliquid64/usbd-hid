@@ -15,6 +15,10 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --features defmt
 
   build:
     name: Build
@@ -28,6 +32,10 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --features defmt
 
   fmt:
     name: Rustfmt
@@ -58,6 +66,10 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --features defmt -- -D warnings
 
   doc:
     name: Doc Check

@@ -6,15 +6,15 @@ keywords = ["no-std", "usb-device"]
 license = "MIT OR Apache-2.0"
 name = "usbd-hid-macros"
 version = "0.6.0"
-edition = "2018"
+edition = "2021"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-quote = "1.0"
+byteorder = { version = "~1.4", default-features = false }
 proc-macro2 = "1.0"
-byteorder = {version = "~1.4", default-features=false }
+quote = "1.0"
 serde = { version = "1.0", default-features = false }
 usbd-hid-descriptors = { path = "../descriptors", version = ">=0.1.2" }
 

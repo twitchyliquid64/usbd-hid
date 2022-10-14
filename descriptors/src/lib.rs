@@ -18,9 +18,9 @@ pub enum GlobalItemKind {
     ReportCount = 9,
 }
 
-impl Into<u8> for GlobalItemKind {
-    fn into(self) -> u8 {
-        unsafe { core::mem::transmute(self) }
+impl From<GlobalItemKind> for u8 {
+    fn from(kind: GlobalItemKind) -> u8 {
+        kind as u8
     }
 }
 
@@ -42,9 +42,9 @@ pub enum LocalItemKind {
     Delimiter = 10,
 }
 
-impl Into<u8> for LocalItemKind {
-    fn into(self) -> u8 {
-        unsafe { core::mem::transmute(self) }
+impl From<LocalItemKind> for u8 {
+    fn from(kind: LocalItemKind) -> u8 {
+        kind as u8
     }
 }
 
@@ -61,19 +61,21 @@ pub enum MainItemKind {
     EndCollection = 0b1100,
 }
 
-impl Into<u8> for MainItemKind {
-    fn into(self) -> u8 {
-        unsafe { core::mem::transmute(self) }
+impl From<MainItemKind> for u8 {
+    fn from(kind: MainItemKind) -> u8 {
+        kind as u8
     }
 }
 
 impl Default for MainItemKind {
-    fn default() -> Self { MainItemKind::Input }
+    fn default() -> Self {
+        MainItemKind::Input
+    }
 }
 
-impl Into<MainItemKind> for String {
-    fn into(self) -> MainItemKind {
-        match self.as_str() {
+impl From<String> for MainItemKind {
+    fn from(s: String) -> Self {
+        match s.as_str() {
             "feature" => MainItemKind::Feature,
             "output" => MainItemKind::Output,
             "collection" => MainItemKind::Collection,
@@ -83,7 +85,6 @@ impl Into<MainItemKind> for String {
         }
     }
 }
-
 
 /// ItemType describes types of items as described in section 6.2.2.7
 /// 'Report Descriptor' of the spec, version 1.11.
@@ -96,16 +97,17 @@ pub enum ItemType {
     Local = 2,
 }
 
-impl Into<u8> for ItemType {
-    fn into(self) -> u8 {
-        unsafe { core::mem::transmute(self) }
+impl From<ItemType> for u8 {
+    fn from(kind: ItemType) -> u8 {
+        kind as u8
     }
 }
 
 impl Default for ItemType {
-    fn default() -> Self { ItemType::Main }
+    fn default() -> Self {
+        ItemType::Main
+    }
 }
-
 
 bitfield! {
     /// MainItemSetting describes the bits which configure invariants on a MainItem.
