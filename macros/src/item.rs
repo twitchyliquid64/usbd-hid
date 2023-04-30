@@ -1,5 +1,6 @@
 extern crate usbd_hid_descriptors;
 
+use alloc::{format, string::{String, ToString}};
 use crate::spec::*;
 use syn::{parse, Expr, ExprLit, Field, Fields, Ident, Lit, Result, Type, TypePath};
 use usbd_hid_descriptors::*;

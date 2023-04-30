@@ -17,6 +17,8 @@ proc-macro2 = "1.0"
 quote = "1.0"
 serde = { version = "1.0", default-features = false }
 usbd-hid-descriptors = { path = "../descriptors", version = ">=0.1.2" }
+hashbrown = "0.13"
+log = "0.4"
 
 [dependencies.syn]
 features = ["extra-traits", "full", "visit"]
