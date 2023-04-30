@@ -52,8 +52,9 @@ impl From<LocalItemKind> for u8 {
 /// 'Report Descriptor' of the spec, version 1.11.
 #[repr(u8)]
 #[allow(unused)]
-#[derive(Copy, Debug, Clone, Eq, PartialEq)]
+#[derive(Copy, Debug, Default, Clone, Eq, PartialEq)]
 pub enum MainItemKind {
+    #[default]
     Input = 0b1000,
     Output = 0b1001,
     Feature = 0b1011,
@@ -64,12 +65,6 @@ pub enum MainItemKind {
 impl From<MainItemKind> for u8 {
     fn from(kind: MainItemKind) -> u8 {
         kind as u8
-    }
-}
-
-impl Default for MainItemKind {
-    fn default() -> Self {
-        MainItemKind::Input
     }
 }
 
@@ -90,8 +85,9 @@ impl From<String> for MainItemKind {
 /// 'Report Descriptor' of the spec, version 1.11.
 #[repr(u8)]
 #[allow(unused)]
-#[derive(Copy, Debug, Clone, Eq, PartialEq)]
+#[derive(Copy, Debug, Default, Clone, Eq, PartialEq)]
 pub enum ItemType {
+    #[default]
     Main = 0,
     Global = 1,
     Local = 2,
@@ -100,12 +96,6 @@ pub enum ItemType {
 impl From<ItemType> for u8 {
     fn from(kind: ItemType) -> u8 {
         kind as u8
-    }
-}
-
-impl Default for ItemType {
-    fn default() -> Self {
-        ItemType::Main
     }
 }
 
