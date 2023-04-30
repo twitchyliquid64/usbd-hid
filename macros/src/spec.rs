@@ -519,7 +519,7 @@ impl GroupSpec {
     fn from_field(&mut self, input: ParseStream, field: Expr) -> Result<()> {
         if let Some(i) = maybe_parse_kv(field.clone()) {
             let (name, item_kind, settings, bits, quirks) = i;
-            self.set_item(name, item_kind.into(), settings, bits, quirks);
+            self.set_item(name, item_kind.as_str().into(), settings, bits, quirks);
             return Ok(());
         };
         match parse_group_spec(input, field) {
