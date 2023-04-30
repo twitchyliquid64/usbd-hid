@@ -104,7 +104,7 @@ impl KeyboardReport {
 #[allow(unused)]
 #[non_exhaustive]
 #[derive(Copy, Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "defmt-impl", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum KeyboardUsage {
     // 0x00: Reserved
     /// Keyboard ErrorRollOver (Footnote 1)
