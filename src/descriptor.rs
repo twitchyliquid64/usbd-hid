@@ -611,7 +611,7 @@ pub struct SystemControlReport {
 /// System control usage ids to use with SystemControlReport
 #[non_exhaustive]
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SystemControlKey {
     PowerDown = 0x81,
@@ -654,10 +654,61 @@ pub enum SystemControlKey {
     DisplayToggleInternalExternal = 0xB5,
     DisplaySwapPrimarySecondary = 0xB6,
     DisplayLcdAutoscale = 0xB7,
+    // Use this reserved value to represent all reserved keys / invalid values
+    Reserved = 0xB8,
 }
 
 impl From<SystemControlKey> for u8 {
     fn from(sck: SystemControlKey) -> u8 {
         sck as u8
+    }
+}
+
+impl From<u8> for SystemControlKey {
+    fn from(k: u8) -> Self {
+        match k {
+            0x81 => Self::PowerDown,
+            0x82 => Self::Sleep,
+            0x83 => Self::WakeUp,
+            0x84 => Self::ContextMenu,
+            0x85 => Self::MainMenu,
+            0x86 => Self::AppMenu,
+            0x87 => Self::MenuHelp,
+            0x88 => Self::MenuExit,
+            0x89 => Self::MenuSelect,
+            0x8A => Self::MenuRight,
+            0x8B => Self::MenuLeft,
+            0x8C => Self::MenuUp,
+            0x8D => Self::MenuDown,
+            0x8E => Self::ColdRestart,
+            0x8F => Self::WarmRestart,
+            0x90 => Self::DpadUp,
+            0x91 => Self::DpadDown,
+            0x92 => Self::DpadRight,
+            0x93 => Self::DpadLeft,
+            0x97 => Self::SystemFunctionShift,
+            0x98 => Self::SystemFunctionShiftLock,
+            0x9A => Self::SystemDismissNotification,
+            0x9B => Self::SystemDoNotDisturb,
+            0xA0 => Self::Dock,
+            0xA1 => Self::Undock,
+            0xA2 => Self::Setup,
+            0xA3 => Self::Break,
+            0xA4 => Self::DebuggerBreak,
+            0xA5 => Self::ApplicationBreak,
+            0xA6 => Self::ApplicationDebuggerBreak,
+            0xA7 => Self::SpeakerMute,
+            0xA8 => Self::Hibernate,
+            0xB0 => Self::DisplayInvert,
+            0xB1 => Self::DisplayInternal,
+            0xB2 => Self::DisplayExternal,
+            0xB3 => Self::DisplayBoth,
+            0xB4 => Self::DisplayDual,
+            0xB5 => Self::DisplayToggleInternalExternal,
+            0xB6 => Self::DisplaySwapPrimarySecondary,
+            0xB7 => Self::DisplayLcdAutoscale,
+            0xB8 => Self::Reserved,
+            _ => Self::Reserved,
+        }
     }
 }
