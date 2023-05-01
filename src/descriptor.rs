@@ -83,6 +83,17 @@ pub struct KeyboardReport {
     pub keycodes: [u8; 6],
 }
 
+impl KeyboardReport {
+    pub const fn default() -> Self {
+        Self {
+            modifier: 0,
+            reserved: 0,
+            leds: 0,
+            keycodes: [0u8; 6],
+        }
+    }
+}
+
 /// KeyboardUsage describes the key codes to be used in implementing a USB keyboard.
 ///
 /// The usage type of all key codes is Selectors, except for the modifier keys
@@ -93,7 +104,7 @@ pub struct KeyboardReport {
 #[allow(unused)]
 #[non_exhaustive]
 #[derive(Copy, Debug, Clone, Eq, PartialEq)]
-#[cfg_attr(feature = "defmt-impl", derive(defmt::Format))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum KeyboardUsage {
     // 0x00: Reserved
     /// Keyboard ErrorRollOver (Footnote 1)
