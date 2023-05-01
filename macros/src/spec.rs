@@ -6,8 +6,14 @@ use syn::punctuated::Punctuated;
 use syn::{parse, Attribute, Expr, ExprAssign, ExprPath, Path, Result, Token};
 use syn::{Block, ExprBlock, ExprLit, ExprTuple, Lit, Stmt};
 
+use alloc::{
+    borrow::ToOwned,
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
 use hashbrown::HashMap;
-use alloc::{borrow::ToOwned, format, string::{String, ToString}, vec, vec::Vec};
 use syn::spanned::Spanned;
 use syn::visit::Visit;
 use usbd_hid_descriptors::*;
