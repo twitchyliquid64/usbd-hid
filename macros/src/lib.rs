@@ -1,8 +1,11 @@
 //! Internal implementation details of usbd-hid.
+#![no_std]
 
+extern crate alloc;
 extern crate proc_macro;
 extern crate usbd_hid_descriptors;
 
+use alloc::{boxed::Box, vec, vec::Vec};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::quote;

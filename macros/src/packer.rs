@@ -1,6 +1,8 @@
 extern crate usbd_hid_descriptors;
 use usbd_hid_descriptors::*;
 
+use alloc::vec::Vec;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse, Ident, Index, Result};

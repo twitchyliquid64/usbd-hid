@@ -6,8 +6,14 @@ use syn::punctuated::Punctuated;
 use syn::{parse, Attribute, Expr, ExprAssign, ExprPath, Path, Result, Token};
 use syn::{Block, ExprBlock, ExprLit, ExprTuple, Lit, Stmt};
 
-use std::collections::HashMap;
-use std::string::String;
+use alloc::{
+    borrow::ToOwned,
+    format,
+    string::{String, ToString},
+    vec,
+    vec::Vec,
+};
+use hashbrown::HashMap;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
 use usbd_hid_descriptors::*;
@@ -137,7 +143,7 @@ impl GroupSpec {
 
 impl IntoIterator for GroupSpec {
     type Item = String;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type IntoIter = vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.field_order.into_iter()
@@ -353,7 +359,7 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
                     }
                 }
                 if packed_bits.is_none() {
-                    println!("WARNING!: bitfield attribute specified but failed to read number of bits from token!");
+                    log::warn!("bitfield attribute specified but failed to read number of bits from token!");
                 }
             }
 
@@ -385,7 +391,7 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
 
                             "volatile" => out.set_volatile(true),
                             "not_volatile" => out.set_volatile(false),
-                            p => println!("WARNING: Unknown item_settings parameter: {}", p),
+                            p => log::warn!("Unknown item_settings parameter: {p}"),
                         }
                     }
                 }
@@ -396,15 +402,13 @@ fn parse_item_attrs(attrs: Vec<Attribute>) -> (Option<MainItemSetting>, Option<u
                     if let proc_macro2::TokenTree::Ident(id) = setting {
                         match id.to_string().as_str() {
                             "allow_short" => quirks.allow_short_form = true,
-                            p => println!("WARNING: Unknown item_settings parameter: {}", p),
+                            p => log::warn!("Unknown item_settings parameter: {p}"),
                         }
                     }
                 }
             }
 
-            p => {
-                println!("WARNING: Unknown item attribute: {}", p);
-            }
+            p => log::warn!("Unknown item attribute: {p}"),
         }
     }
 
