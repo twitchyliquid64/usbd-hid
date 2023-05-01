@@ -1,3 +1,5 @@
+#![no_std]
+
 use bitfield::bitfield;
 
 /// GlobalItemKind describes global item tags as described in section 6.2.2.7
@@ -68,9 +70,9 @@ impl From<MainItemKind> for u8 {
     }
 }
 
-impl From<String> for MainItemKind {
-    fn from(s: String) -> Self {
-        match s.as_str() {
+impl From<&str> for MainItemKind {
+    fn from(s: &str) -> Self {
+        match s {
             "feature" => MainItemKind::Feature,
             "output" => MainItemKind::Output,
             "collection" => MainItemKind::Collection,
