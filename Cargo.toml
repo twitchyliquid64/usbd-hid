@@ -7,7 +7,7 @@ members = [
 [package]
 name = "usbd-hid"
 description = "A HID class for use with usb-device."
-version = "0.6.1"
+version = "0.7.0"
 keywords = ["hid", "no-std", "usb-device"]
 license = "MIT OR Apache-2.0"
 authors = ["twitchyliquid64"]
@@ -19,7 +19,7 @@ repository = "https://github.com/twitchyliquid64/usbd-hid"
 defmt = { version = "0.3", optional = true }
 serde = { version = "1.0", default-features = false }
 ssmarshal = { version = "1.0", default-features = false }
-usb-device = "0.2.9"
+usb-device = "0.3.0"
 usbd-hid-macros = { path = "macros", version = "0.6.0" }
 
 
