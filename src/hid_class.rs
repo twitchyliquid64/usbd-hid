@@ -408,6 +408,24 @@ impl<B: UsbBus> HIDClass<'_, B> {
         }
     }
 
+    pub fn maybe_push_input<'a, IR: AsInputReport>(
+        &self,
+         mut producer: impl FnMut() -> IR,
+    ) -> Option<Result<usize>> {
+        if let Some(ep) = &self.in_ep {
+            let mut buff: [u8; 64] = [0; 64];
+            ep.maybe_write(|| {
+                let size = match serialize(&mut buff, &producer()) {
+                    Ok(l) => l,
+                    Err(_) => return Err(UsbError::BufferOverflow),
+                };
+                Ok(&buff[0..size])
+            })
+        } else {
+            Some(Err(UsbError::InvalidEndpoint))
+        }
+    }
+
     /// Tries to write an input (device-to-host) report from the given raw bytes.
     /// Data is expected to be a valid HID report for INPUT items. If report ID's
     /// were used in the descriptor, the report ID corresponding to this report
