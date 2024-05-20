@@ -175,6 +175,7 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage_page", "CONSUMER") => Some(0x0C),
         ("usage_page", "DIGITIZER") => Some(0x0D),
         ("usage_page", "ALPHANUMERIC_DISPLAY") => Some(0x14),
+        ("usage_page", "SENSOR") => Some(0x20),
         ("usage_page", "BARCODE_SCANNER") => Some(0x8C),
         ("usage_page", "VENDOR_DEFINED_START") => Some(0xFF00),
         ("usage_page", "VENDOR_DEFINED_END") => Some(0xFFFF),
@@ -227,6 +228,15 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage", "HEADPHONE") => Some(0x05),
         ("usage", "GRAPHIC_EQUALIZER") => Some(0x06),
         ("usage", "AC_PAN") => Some(0x0238),
+
+        // sensor power states
+        ("usage", "SENSOR_POWER_STATE") => Some(0x0319),
+        ("usage", "SENSOR_POWER_STATE_UNDEFINED") => Some(0x0850),
+        ("usage", "SENSOR_POWER_STATE_D0_FULL_POWER") => Some(0x0851),
+        ("usage", "SENSOR_POWER_STATE_D1_LOW_POWER") => Some(0x0852),
+        ("usage", "SENSOR_POWER_STATE_D2_STANDBY_WITH_WAKE") => Some(0x0853),
+        ("usage", "SENSOR_POWER_STATE_D3_SLEEP_WITH_WAKE") => Some(0x0854),
+        ("usage", "SENSOR_POWER_STATE_D4_POWER_OFF") => Some(0x0855),
 
         (_, _) => None,
     }
