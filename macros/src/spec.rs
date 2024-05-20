@@ -53,6 +53,7 @@ pub struct GroupSpec {
     pub usage_page: Option<u32>,
     pub collection: Option<u32>,
     pub logical_min: Option<u32>,
+    pub unit_exponent: Option<u32>,
 
     // Local items
     pub usage: Vec<u32>,
@@ -111,6 +112,10 @@ impl GroupSpec {
             }
             "collection" => {
                 self.collection = Some(val);
+                Ok(())
+            }
+            "unit_exponent" => {
+                self.unit_exponent = Some(val);
                 Ok(())
             }
             // Local items.
