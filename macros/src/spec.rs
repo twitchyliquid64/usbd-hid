@@ -176,6 +176,7 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage_page", "DIGITIZER") => Some(0x0D),
         ("usage_page", "ALPHANUMERIC_DISPLAY") => Some(0x14),
         ("usage_page", "BARCODE_SCANNER") => Some(0x8C),
+        ("usage_page", "FIDO_ALLIANCE") => Some(0xF1D0),
         ("usage_page", "VENDOR_DEFINED_START") => Some(0xFF00),
         ("usage_page", "VENDOR_DEFINED_END") => Some(0xFFFF),
 
@@ -227,6 +228,11 @@ pub fn try_resolve_constant(key_name: String, path: String) -> Option<u32> {
         ("usage", "HEADPHONE") => Some(0x05),
         ("usage", "GRAPHIC_EQUALIZER") => Some(0x06),
         ("usage", "AC_PAN") => Some(0x0238),
+
+        // FIDO Alliance usage_page
+        ("usage", "U2F_AUTHENTICATOR_DEVICE") => Some(0x1),
+        ("usage", "INPUT_REPORT_DATA") => Some(0x20),
+        ("usage", "OUTPUT_REPORT_DATA") => Some(0x21),
 
         (_, _) => None,
     }
