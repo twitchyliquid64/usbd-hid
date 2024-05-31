@@ -978,3 +978,21 @@ impl From<u8> for SystemControlKey {
         }
     }
 }
+
+/// CtapReport describes a report and its companion descriptor that can be
+/// used to present a FIDO-compatible authenticator device to the host.
+#[gen_hid_descriptor(
+    (collection = APPLICATION, usage_page = FIDO_ALLIANCE, usage = U2F_AUTHENTICATOR_DEVICE) = {
+        (usage = INPUT_REPORT_DATA, logical_min = 0x0) = {
+            #[item_settings data,variable,absolute] data_in=input;
+        };
+        (usage = OUTPUT_REPORT_DATA, logical_min = 0x0) = {
+            #[item_settings data,variable,absolute] data_out=output;
+        };
+    }
+)]
+#[allow(dead_code)]
+pub struct CtapReport {
+    pub data_in: [u8; 64],
+    pub data_out: [u8; 64],
+}
