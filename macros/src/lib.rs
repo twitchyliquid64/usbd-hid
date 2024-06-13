@@ -166,8 +166,9 @@ use packer::{gen_serializer, uses_report_ids};
 /// Note: Parameters are a tuple, so make sure you have a trailing comma if you only have one
 /// parameter.
 ///
-/// The valid parameters are `collection`, `usage_page`, `usage`, `usage_min`, `usage_max`, and
-/// `report_id`. These simply configure parameters that apply to contained items in the report.
+/// The valid parameters are `collection`, `usage_page`, `usage`, `usage_min`, `usage_max`,
+/// `unit_exponent`, and `report_id`.
+/// These simply configure parameters that apply to contained items in the report.
 /// Use of the `collection` parameter automatically creates a collection feature for all items
 /// which are contained within it, and other parameters specified in the same collection-spec
 /// apply to the collection, not directly to the elements of the collection (ie: defining a
@@ -531,6 +532,16 @@ impl DescCompilation {
                 ItemType::Global.into(),
                 GlobalItemKind::LogicalMin.into(),
                 logical_minimum as isize,
+                false,
+                false,
+            );
+        }
+        if let Some(unit_exponent) = spec.unit_exponent {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::UnitExponent.into(),
+                unit_exponent as isize,
                 false,
                 false,
             );
