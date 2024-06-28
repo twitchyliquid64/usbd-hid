@@ -229,7 +229,7 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
     let (descriptor, fields) = output;
 
     let mut out = quote! {
-        #[derive(Debug, Clone, Copy)]
+        #[derive(Debug, Eq, PartialEq, Clone, Copy)]
         #[repr(C, packed)]
         #decl
 
