@@ -83,17 +83,6 @@ pub struct KeyboardReport {
     pub keycodes: [u8; 6],
 }
 
-impl KeyboardReport {
-    pub const fn default() -> Self {
-        Self {
-            modifier: 0,
-            reserved: 0,
-            leds: 0,
-            keycodes: [0u8; 6],
-        }
-    }
-}
-
 /// KeyboardUsage describes the key codes to be used in implementing a USB keyboard.
 ///
 /// The usage type of all key codes is Selectors, except for the modifier keys
@@ -977,4 +966,22 @@ impl From<u8> for SystemControlKey {
             _ => Self::Reserved,
         }
     }
+}
+
+/// CtapReport describes a report and its companion descriptor that can be
+/// used to present a FIDO-compatible authenticator device to the host.
+#[gen_hid_descriptor(
+    (collection = APPLICATION, usage_page = FIDO_ALLIANCE, usage = U2F_AUTHENTICATOR_DEVICE) = {
+        (usage = INPUT_REPORT_DATA, logical_min = 0x0) = {
+            #[item_settings data,variable,absolute] data_in=input;
+        };
+        (usage = OUTPUT_REPORT_DATA, logical_min = 0x0) = {
+            #[item_settings data,variable,absolute] data_out=output;
+        };
+    }
+)]
+#[allow(dead_code)]
+pub struct CtapReport {
+    pub data_in: [u8; 64],
+    pub data_out: [u8; 64],
 }
