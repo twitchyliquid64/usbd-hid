@@ -26,3 +26,4 @@ usbd-hid-macros = { path = "macros", version = "0.8.2" }
 [features]
 # Add defmt Format support enums and structs
 defmt = ["dep:defmt", "usb-device/defmt"]
+std = ["serde/std", "ssmarshal/std"]
