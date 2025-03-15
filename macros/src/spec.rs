@@ -492,14 +492,14 @@ fn maybe_parse_kv(
 
 struct AttributeCollector(Vec<Attribute>);
 
-impl<'ast> AttributeCollector {
+impl AttributeCollector {
     fn new() -> Self {
         Self(vec![])
     }
 
     /// Recursively finds all Attributes contained by an Expr.
     /// Returns None when no attributes are found.
-    pub fn all(expr: &'ast Expr) -> Option<Vec<Attribute>> {
+    pub fn all(expr: &'_ Expr) -> Option<Vec<Attribute>> {
         let mut visitor = Self::new();
         visitor.visit_expr(expr);
         if visitor.0.is_empty() {
