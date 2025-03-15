@@ -556,7 +556,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                 HID_DESC_DESCTYPE_HID_REPORT,
                 // HID report descriptor size,
                 (self.report_descriptor.len() & 0xFF) as u8,
-                (self.report_descriptor.len() >> 8 & 0xFF) as u8,
+                ((self.report_descriptor.len() >> 8) & 0xFF) as u8,
             ],
         )?;
 
@@ -600,7 +600,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
                             HID_DESC_DESCTYPE_HID_REPORT,
                             // HID report descriptor size,
                             (self.report_descriptor.len() & 0xFF) as u8,
-                            (self.report_descriptor.len() >> 8 & 0xFF) as u8,
+                            ((self.report_descriptor.len() >> 8) & 0xFF) as u8,
                         ];
                         xfer.accept_with(buf).ok();
                     }
