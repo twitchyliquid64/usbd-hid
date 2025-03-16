@@ -133,6 +133,7 @@ pub enum HidCountryCode {
 pub enum HidSubClass {
     NoSubClass = 0,
     Boot = 1,
+    Xbox360 = 93,
 }
 
 /// Defines fixed packet format
@@ -192,6 +193,10 @@ pub struct HidClassSettings {
     pub protocol: HidProtocol,
     pub config: ProtocolModeConfig,
     pub locale: HidCountryCode,
+    /// Used to specify what usb class this device should populate as.
+    /// Generally, this should be the standard HID class ID (`0x03`), but some
+    /// devices use a different value here (Like Xbox 360 controllers)
+    pub device_class: u8,
 }
 
 impl Default for HidClassSettings {
@@ -201,6 +206,7 @@ impl Default for HidClassSettings {
             protocol: HidProtocol::Generic,
             config: ProtocolModeConfig::DefaultBehavior,
             locale: HidCountryCode::NotSupported,
+            device_class: USB_CLASS_HID,
         }
     }
 }
@@ -418,7 +424,7 @@ impl<B: UsbBus> HIDClass<'_, B> {
             HidProtocol::Keyboard | HidProtocol::Mouse => {
                 if let Some(protocol) = self.protocol {
                     if (protocol == HidProtocolMode::Report
-                        && self.settings.subclass != HidSubClass::NoSubClass)
+                        && self.settings.subclass == HidSubClass::Boot)
                         || (protocol == HidProtocolMode::Boot
                             && self.settings.subclass != HidSubClass::Boot)
                     {
@@ -537,7 +543,7 @@ impl<B: UsbBus> UsbClass<B> for HIDClass<'_, B> {
     fn get_configuration_descriptors(&self, writer: &mut DescriptorWriter) -> Result<()> {
         writer.interface(
             self.if_num,
-            USB_CLASS_HID,
+            self.settings.device_class,
             self.settings.subclass as u8,
             self.settings.protocol as u8,
         )?;
