@@ -801,7 +801,7 @@ pub struct MediaKeyboardReport {
 /// Media player usage ids that can be used in MediaKeyboardReport
 #[non_exhaustive]
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum MediaKey {
     Zero = 0x00,
@@ -878,7 +878,7 @@ pub struct SystemControlReport {
 /// System control usage ids to use with SystemControlReport
 #[non_exhaustive]
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SystemControlKey {
     PowerDown = 0x81,
