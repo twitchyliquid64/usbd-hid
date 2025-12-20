@@ -3,8 +3,7 @@ use usb_device::class_prelude::*;
 use usb_device::Result;
 
 use crate::descriptor::AsInputReport;
-extern crate ssmarshal;
-use ssmarshal::serialize;
+use crate::descriptor::BufferOverflow;
 
 const USB_CLASS_HID: u8 = 0x03;
 
@@ -398,9 +397,9 @@ impl<B: UsbBus> HIDClass<'_, B> {
 
         if let Some(ep) = &self.in_ep {
             let mut buff: [u8; 64] = [0; 64];
-            let size = match serialize(&mut buff, r) {
+            let size = match r.serialize(&mut buff) {
                 Ok(l) => l,
-                Err(_) => return Err(UsbError::BufferOverflow),
+                Err(BufferOverflow) => return Err(UsbError::BufferOverflow),
             };
             ep.write(&buff[0..size])
         } else {

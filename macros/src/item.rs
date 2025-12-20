@@ -58,7 +58,8 @@ pub fn analyze_field(field: Field, ft: Type, item: &ItemSpec) -> Result<ReportUn
     if bit_width >= 64 {
         return Err(parse::Error::new(
             type_ident.span(),
-            "`#[gen_hid_descriptor]` integer larger than 64 is not supported in ssmarshal",
+            // TODO: not sure if this is a limitation of the HID protocol or just this crate.
+            "`#[gen_hid_descriptor]` integer >= 64 bits is not supported in usbd_hid",
         ));
     }
 

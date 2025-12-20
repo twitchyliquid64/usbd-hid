@@ -1,7 +1,5 @@
 //! Implements generation of HID report descriptors as well as common reports
-extern crate serde;
 extern crate usbd_hid_macros;
-use serde::ser::{Serialize, SerializeTuple, Serializer};
 
 pub use usbd_hid_macros::gen_hid_descriptor;
 
@@ -11,12 +9,16 @@ pub trait SerializedDescriptor {
 }
 
 /// Report types which serialize into input reports, ready for transmission.
-pub trait AsInputReport: Serialize {}
+pub trait AsInputReport {
+    fn serialize(&self, buffer: &mut [u8]) -> Result<usize, BufferOverflow>;
+}
+
+#[derive(Debug)]
+pub struct BufferOverflow;
 
 /// Prelude for modules which use the `gen_hid_descriptor` macro.
 pub mod generator_prelude {
     pub use crate::descriptor::{AsInputReport, SerializedDescriptor};
-    pub use serde::ser::{Serialize, SerializeTuple, Serializer};
     pub use usbd_hid_macros::gen_hid_descriptor;
 }
 

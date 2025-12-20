@@ -17,8 +17,6 @@ repository = "https://github.com/twitchyliquid64/usbd-hid"
 
 [dependencies]
 defmt = { version = "0.3", optional = true }
-serde = { version = "1.0", default-features = false }
-ssmarshal = { version = "1.0", default-features = false }
 usb-device = "0.3.0"
 usbd-hid-macros = { path = "macros", version = "0.9.0" }
 
@@ -26,4 +24,3 @@ usbd-hid-macros = { path = "macros", version = "0.9.0" }
 [features]
 # Add defmt Format support enums and structs
 defmt = ["dep:defmt", "usb-device/defmt"]
-std = ["serde/std", "ssmarshal/std"]

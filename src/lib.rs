@@ -9,6 +9,10 @@ pub use usb_device::{Result, UsbError};
 pub mod descriptor;
 pub mod hid_class;
 
+// Allow gen_hid_descriptor macro to access usbd_hid types from within usbd_hid itself,
+// while retaining the ability to run the macro in user crates as well.
+extern crate self as usbd_hid;
+
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
@@ -16,7 +20,7 @@ mod tests {
     use crate::descriptor::{KeyboardReport, MouseReport, SystemControlReport};
 
     fn serialize<T: AsInputReport>(buf: &mut [u8], report: T) -> &[u8] {
-        let size = ssmarshal::serialize(buf, &report).unwrap();
+        let size = report.serialize(buf).unwrap();
         &buf[..size]
     }
 
@@ -353,7 +357,11 @@ mod tests {
 
     #[test]
     fn test_ctap_serialize() {
-        let expected = &[];
+        let expected = &[
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1,
+        ];
         let report = CtapReport {
             data_in: [1; 64],
             data_out: [2; 64],

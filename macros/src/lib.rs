@@ -250,15 +250,12 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         out = quote! {
             #out
 
-            impl Serialize for #ident {
-                fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-                where
-                    S: Serializer,
+            impl AsInputReport for #ident {
+                fn serialize(&self, buffer: &mut [u8]) -> Result<usize, usbd_hid::descriptor::BufferOverflow>
                 {
                     #input_serializer
                 }
             }
-            impl AsInputReport for #ident {}
         };
     }
 
