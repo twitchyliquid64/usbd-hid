@@ -12,8 +12,13 @@ pub mod hid_class;
 #[cfg(test)]
 #[allow(unused_imports)]
 mod tests {
-    use crate::descriptor::generator_prelude::*;
+    use crate::descriptor::{generator_prelude::*, CtapReport};
     use crate::descriptor::{KeyboardReport, MouseReport, SystemControlReport};
+
+    fn serialize<T: AsInputReport>(buf: &mut [u8], report: T) -> &[u8] {
+        let size = ssmarshal::serialize(buf, &report).unwrap();
+        &buf[..size]
+    }
 
     // This should generate this descriptor:
     // 0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined 0xFF00)
@@ -47,6 +52,15 @@ mod tests {
             1u8, 129u8, 2u8, 39u8, 255u8, 255u8, 0u8, 0u8, 117u8, 16u8, 145u8, 2u8, 192u8,
         ];
         assert_eq!(CustomUnaryUnsignedFrame::desc(), expected);
+    }
+
+    #[test]
+    fn test_custom_unsigned_serialize() {
+        let expected = &[1];
+        let report = CustomUnaryUnsignedFrame { f1: 1, f2: 2 };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
     }
 
     // This should generate this descriptor:
@@ -83,6 +97,15 @@ mod tests {
             117u8, 16u8, 145u8, 2u8, 192u8,
         ];
         assert_eq!(CustomUnarySignedFrame::desc()[0..32], expected[0..32]);
+    }
+
+    #[test]
+    fn test_custom_signed_serialize() {
+        let expected = &[1];
+        let report = CustomUnarySignedFrame { f1: 1, f2: 2 };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
     }
 
     #[gen_hid_descriptor(
@@ -135,6 +158,18 @@ mod tests {
         assert_eq!(CustomArray::desc(), expected);
     }
 
+    #[test]
+    fn test_array_serialize() {
+        let expected = [
+            4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+            4, 4, 4,
+        ];
+        let report = CustomArray { buff: [4; 32] };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
+    }
+
     #[gen_hid_descriptor(
         (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
             (usage_min = BUTTON_1, usage_max = BUTTON_3) = {
@@ -154,6 +189,15 @@ mod tests {
             0u8, 117u8, 8u8, 149u8, 1u8, 129u8, 6u8, 192u8,
         ];
         assert_eq!(CustomConst::desc(), expected);
+    }
+
+    #[test]
+    fn test_custom_const_serialize() {
+        let expected = &[1];
+        let report = CustomConst { f1: 1 };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
     }
 
     // This should generate the following descriptor:
@@ -210,6 +254,21 @@ mod tests {
     }
 
     #[test]
+    fn test_mouse_serialize() {
+        let expected = &[1, 2, 3, 4, 5];
+        let report = MouseReport {
+            buttons: 1,
+            x: 2,
+            y: 3,
+            wheel: 4,
+            pan: 5,
+        };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_keyboard_descriptor() {
         let expected = &[
             0x05, 0x01, // Usage Page (Generic Desktop)
@@ -251,6 +310,20 @@ mod tests {
     }
 
     #[test]
+    fn test_keyboard_serialize() {
+        let expected = &[1, 2, 4, 5, 6, 7, 8, 9];
+        let report = KeyboardReport {
+            modifier: 1,
+            reserved: 2,
+            leds: 3,
+            keycodes: [4, 5, 6, 7, 8, 9],
+        };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
     fn test_system_control_descriptor() {
         let expected = &[
             0x05, 0x01, // Usage Page (Generic Desktop Ctrls)
@@ -267,5 +340,26 @@ mod tests {
             0xC0, // End Collection
         ];
         assert_eq!(SystemControlReport::desc(), expected);
+    }
+
+    #[test]
+    fn test_system_control_serialize() {
+        let expected = &[4];
+        let report = SystemControlReport { usage_id: 4 };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_ctap_serialize() {
+        let expected = &[];
+        let report = CtapReport {
+            data_in: [1; 64],
+            data_out: [2; 64],
+        };
+        let mut buf = [0; 64];
+        let result = serialize(&mut buf, report);
+        assert_eq!(result, expected);
     }
 }
