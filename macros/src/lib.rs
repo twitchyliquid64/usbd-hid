@@ -86,8 +86,8 @@ use packer::{gen_serializer, uses_report_ids};
 /// ```ignore
 /// #[gen_hid_descriptor(
 ///     (report_id = 0x01,) = {
-///         #[packed_bits 3] f1=input;
-///         #[packed_bits 9] f2=input;
+///         #[packed_bits = 3] f1=input;
+///         #[packed_bits = 9] f2=input;
 ///     }
 /// )]
 /// struct CustomPackedBits {
@@ -100,7 +100,7 @@ use packer::{gen_serializer, uses_report_ids};
 /// interpreted as packed bits. As such, `f1` describes 3 boolean inputs, and `f2` describes
 /// 9 boolean inputs. Padding constants are automatically generated.
 ///
-/// The `#[packed_bits <num bits>]` feature is intended to be used for describing button presses.
+/// The `#[packed_bits = <num bits>]` feature is intended to be used for describing button presses.
 ///
 /// - Customizing the settings on a report item
 ///
@@ -108,8 +108,8 @@ use packer::{gen_serializer, uses_report_ids};
 /// #[gen_hid_descriptor(
 ///     (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
 ///         (usage_min = X, usage_max = Y) = {
-///             #[item_settings data,variable,relative] x=input;
-///             #[item_settings data,variable,relative] y=input;
+///             #[item_settings(data,variable,relative)] x=input;
+///             #[item_settings(data,variable,relative)] y=input;
 ///         };
 ///     }
 /// )]
@@ -178,7 +178,7 @@ use packer::{gen_serializer, uses_report_ids};
 /// ## `item-spec`:
 ///
 /// ```ignore
-///     #[packed_bits <num_items>] #[item_settings <setting>,...] <fieldname>=input OR output;
+///     #[packed_bits = <num_items>] #[item_settings(<setting>,...)] <fieldname>=input OR output;
 /// ```
 ///
 /// The two sub-attributes are both optional.
@@ -197,9 +197,9 @@ use packer::{gen_serializer, uses_report_ids};
 /// ## Quirks
 ///
 /// By default generated descriptors are such to maximize compatibility. To change this
-/// behaviour, you can use a `#[quirks <settings>]` attribute on the relevant input/output
+/// behaviour, you can use a `#[quirks(<settings>)]` attribute on the relevant input/output
 /// item.
-/// For now, the only quirk is `#[quirks allow_short]`, which allows global features to be
+/// For now, the only quirk is `#[quirks(allow_short)]`, which allows global features to be
 /// serialized in a 1 byte form. This is disabled by default as the Windows HID parser
 /// considers it invalid.
 #[proc_macro_attribute]
