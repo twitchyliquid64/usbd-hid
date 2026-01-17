@@ -138,7 +138,7 @@ mod tests {
     #[gen_hid_descriptor(
         (collection = APPLICATION, usage_page = VENDOR_DEFINED_START, usage = 0x01) = {
             (usage_min = BUTTON_1, usage_max = BUTTON_3) = {
-                #[item_settings data,variable,relative] f1=input;
+                #[item_settings(data,variable,relative)] f1=input;
             };
         }
     )]
@@ -175,9 +175,9 @@ mod tests {
     // 0x81, 0x03,        // Input (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
     #[gen_hid_descriptor(
         (report_id = 0x01,) = {
-            #[packed_bits 3] f1=input;
-            #[packed_bits 9] f2=input;
-            #[packed_bits 20] f3=input;
+            #[packed_bits = 3] f1=input;
+            #[packed_bits = 9] f2=input;
+            #[packed_bits = 20] f3=input;
         }
     )]
     #[allow(dead_code)]

@@ -26,22 +26,22 @@ pub mod generator_prelude {
     (collection = APPLICATION, usage_page = GENERIC_DESKTOP, usage = MOUSE) = {
         (collection = PHYSICAL, usage = POINTER) = {
             (usage_page = BUTTON, usage_min = BUTTON_1, usage_max = BUTTON_8) = {
-                #[packed_bits 8] #[item_settings data,variable,absolute] buttons=input;
+                #[packed_bits = 8] #[item_settings(data,variable,absolute)] buttons=input;
             };
             (usage_page = GENERIC_DESKTOP,) = {
                 (usage = X,) = {
-                    #[item_settings data,variable,relative] x=input;
+                    #[item_settings(data,variable,relative)] x=input;
                 };
                 (usage = Y,) = {
-                    #[item_settings data,variable,relative] y=input;
+                    #[item_settings(data,variable,relative)] y=input;
                 };
                 (usage = WHEEL,) = {
-                    #[item_settings data,variable,relative] wheel=input;
+                    #[item_settings(data,variable,relative)] wheel=input;
                 };
             };
             (usage_page = CONSUMER,) = {
                 (usage = AC_PAN,) = {
-                    #[item_settings data,variable,relative] pan=input;
+                    #[item_settings(data,variable,relative)] pan=input;
                 };
             };
         };
@@ -62,16 +62,16 @@ pub struct MouseReport {
 #[gen_hid_descriptor(
     (collection = APPLICATION, usage_page = GENERIC_DESKTOP, usage = KEYBOARD) = {
         (usage_page = KEYBOARD, usage_min = 0xE0, usage_max = 0xE7) = {
-            #[packed_bits 8] #[item_settings data,variable,absolute] modifier=input;
+            #[packed_bits = 8] #[item_settings(data,variable,absolute)] modifier=input;
         };
         (usage_min = 0x00, usage_max = 0xFF) = {
-            #[item_settings constant,variable,absolute] reserved=input;
+            #[item_settings(constant,variable,absolute)] reserved=input;
         };
         (usage_page = LEDS, usage_min = 0x01, usage_max = 0x05) = {
-            #[packed_bits 5] #[item_settings data,variable,absolute] leds=output;
+            #[packed_bits = 5] #[item_settings(data,variable,absolute)] leds=output;
         };
         (usage_page = KEYBOARD, usage_min = 0x00, usage_max = 0xDD) = {
-            #[item_settings data,array,absolute] keycodes=input;
+            #[item_settings(data,array,absolute)] keycodes=input;
         };
     }
 )]
@@ -789,7 +789,7 @@ impl From<u8> for KeyboardUsage {
 #[gen_hid_descriptor(
     (collection = APPLICATION, usage_page = CONSUMER, usage = CONSUMER_CONTROL) = {
         (usage_page = CONSUMER, usage_min = 0x00, usage_max = 0x514) = {
-            #[item_settings data,array,absolute,not_null] usage_id=input;
+            #[item_settings(data,array,absolute,not_null)] usage_id=input;
         };
     }
 )]
@@ -866,7 +866,7 @@ impl From<u16> for MediaKey {
 #[gen_hid_descriptor(
     (collection = APPLICATION, usage_page = GENERIC_DESKTOP, usage = SYSTEM_CONTROL) = {
         (usage_min = 0x81, usage_max = 0xB7, logical_min = 1) = {
-            #[item_settings data,array,absolute,not_null] usage_id=input;
+            #[item_settings(data,array,absolute,not_null)] usage_id=input;
         };
     }
 )]
@@ -984,10 +984,10 @@ impl From<u8> for SystemControlKey {
 #[gen_hid_descriptor(
     (collection = APPLICATION, usage_page = FIDO_ALLIANCE, usage = U2F_AUTHENTICATOR_DEVICE) = {
         (usage = INPUT_REPORT_DATA, logical_min = 0x0) = {
-            #[item_settings data,variable,absolute] data_in=input;
+            #[item_settings(data,variable,absolute)] data_in=input;
         };
         (usage = OUTPUT_REPORT_DATA, logical_min = 0x0) = {
-            #[item_settings data,variable,absolute] data_out=output;
+            #[item_settings(data,variable,absolute)] data_out=output;
         };
     }
 )]
