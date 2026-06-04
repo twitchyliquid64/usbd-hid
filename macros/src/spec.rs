@@ -8,12 +8,12 @@ use syn::{Block, ExprBlock, ExprLit, ExprTuple, Lit, Stmt};
 
 use alloc::{
     borrow::ToOwned,
+    collections::BTreeMap,
     format,
     string::{String, ToString},
     vec,
     vec::Vec,
 };
-use hashbrown::HashMap;
 use syn::spanned::Spanned;
 use syn::visit::Visit;
 use usbd_hid_descriptors::*;
@@ -46,7 +46,7 @@ pub struct ItemSpec {
 /// used in the procedural macro's invocation.
 #[derive(Debug, Clone, Default)]
 pub struct GroupSpec {
-    pub fields: HashMap<String, Spec>,
+    pub fields: BTreeMap<String, Spec>,
     pub field_order: Vec<String>,
 
     pub report_id: Option<u32>,
