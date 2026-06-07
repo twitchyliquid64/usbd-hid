@@ -16,7 +16,7 @@ repository = "https://github.com/twitchyliquid64/usbd-hid"
 
 
 [dependencies]
-defmt = { version = "0.3", optional = true }
+defmt = { version = "1", optional = true }
 usb-device = "0.3.0"
 usbd-hid-macros = { path = "macros", version = "0.10.0" }
 
