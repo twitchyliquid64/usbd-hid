@@ -547,13 +547,9 @@ impl DescCompilation {
             match f {
                 Spec::MainItem(i) => {
                     let d = field_decl(fields, name);
-                    match analyze_field(d.clone(), d.ty, i) {
-                        Ok(item) => {
-                            self.processed_fields.push(item.clone());
-                            self.emit_field(elems, i, item.descriptor_item)
-                        }
-                        Err(e) => return Err(e),
-                    }
+                    let item = analyze_field(d.clone(), d.ty, i)?;
+                    self.processed_fields.push(item.clone());
+                    self.emit_field(elems, i, item.descriptor_item);
                 }
                 Spec::Collection(g) => {
                     self.emit_group(elems, g, fields)?;
