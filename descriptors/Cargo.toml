@@ -9,4 +9,4 @@ version = "0.10.0"
 edition = "2021"
 
 [dependencies]
-bitfield = "~0.14"
+bitfield = "0.19"
