@@ -21,4 +21,4 @@ log = "0.4"
 
 [dependencies.syn]
 features = ["extra-traits", "full", "visit"]
-version = "2.0"
+version = "3.0"
