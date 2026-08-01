@@ -452,15 +452,13 @@ fn maybe_parse_kv(
     ItemQuirks,
 )> {
     // Match out the identifier on the left of the equals.
-    let name: String;
-    if let Some(lhs) = maybe_parse_kv_lhs(field.clone()) {
+    let name: String = {
+        let lhs = maybe_parse_kv_lhs(field.clone())?;
         if lhs.len() != 1 {
             return None;
         }
-        name = lhs[0].clone();
-    } else {
-        return None;
-    }
+        lhs[0].clone()
+    };
 
     // Decode item settings.
     let item_settings = if let Some(attrs) = AttributeCollector::all(&field) {
@@ -544,10 +542,8 @@ impl GroupSpec {
             self.set_item(name, item_kind.as_str().into(), settings, bits, quirks);
             return Ok(());
         };
-        match parse_group_spec(input, field) {
-            Err(e) => return Err(e),
-            Ok(g) => self.add_nested_group(g),
-        };
+        let g = parse_group_spec(input, field)?;
+        self.add_nested_group(g);
         Ok(())
     }
 }
