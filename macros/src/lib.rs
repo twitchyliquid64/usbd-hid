@@ -228,15 +228,20 @@ pub fn gen_hid_descriptor(args: TokenStream, input: TokenStream) -> TokenStream 
         Err(e) => return e.to_compile_error().into(),
     };
     let (descriptor, fields) = output;
+    let descriptor_len = descriptor.elems.len();
 
     let mut out = quote! {
         #[derive(Debug, Clone, Copy, Eq, PartialEq)]
         #[repr(C, packed)]
         #decl
 
+        impl #ident {
+            pub const DESC: [u8; #descriptor_len] = #descriptor;
+        }
+
         impl SerializedDescriptor for #ident {
             fn desc() -> &'static[u8] {
-                &#descriptor
+                &Self::DESC
             }
         }
     };
