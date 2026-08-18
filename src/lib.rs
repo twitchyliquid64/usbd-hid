@@ -67,6 +67,60 @@ mod tests {
         assert_eq!(result, expected);
     }
 
+    #[gen_hid_descriptor(
+        (collection = LOGICAL, usage_page = GENERIC_DESKTOP, usage = 0x02) = {
+            (usage = X,) = {
+                x=input;
+            };
+            (usage = 0x48, logical_min = 0, logical_max = 1,
+             physical_min = 1, physical_max = 120) = {
+                multiplier=feature;
+            };
+        }
+    )]
+    #[allow(dead_code)]
+    struct ResolutionMultiplierReport {
+        x: u8,
+        multiplier: u8,
+    }
+
+    #[test]
+    fn test_resolution_multiplier_descriptor() {
+        let expected: &[u8] = &[
+            0x05, 0x01, 0x09, 0x02, 0xa1, 0x02, 0x09, 0x30, 0x15, 0x00, 0x26, 0xff, 0x00, 0x75,
+            0x08, 0x95, 0x01, 0x81, 0x02, 0x09, 0x48, 0x15, 0x00, 0x25, 0x01, 0x35, 0x01, 0x45,
+            0x78, 0xb1, 0x02, 0x35, 0x00, 0x45, 0x00, 0xc0,
+        ];
+        assert_eq!(ResolutionMultiplierReport::desc(), expected);
+    }
+
+    #[gen_hid_descriptor(
+        (usage_page = GENERIC_DESKTOP,) = {
+            (usage = 0x48, logical_min = 0, logical_max = 1,
+             physical_min = 1, physical_max = 120) = {
+                multiplier=feature;
+            };
+            (usage = X,) = {
+                x=input;
+            };
+        }
+    )]
+    #[allow(dead_code)]
+    struct PhysicalRangeResetReport {
+        multiplier: u8,
+        x: u8,
+    }
+
+    #[test]
+    fn test_physical_range_is_reset_before_following_item() {
+        let expected: &[u8] = &[
+            0x05, 0x01, 0x09, 0x48, 0x15, 0x00, 0x25, 0x01, 0x35, 0x01, 0x45, 0x78, 0x75, 0x08,
+            0x95, 0x01, 0xb1, 0x02, 0x35, 0x00, 0x45, 0x00, 0x09, 0x30, 0x26, 0xff, 0x00, 0x81,
+            0x02,
+        ];
+        assert_eq!(PhysicalRangeResetReport::desc(), expected);
+    }
+
     // This should generate this descriptor:
     // 0x06, 0x00, 0xFF,                // Usage Page (Vendor Defined 0xFF00)
     // 0x09, 0x01,                      // Usage (0x01)
