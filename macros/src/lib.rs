@@ -167,7 +167,7 @@ use packer::{gen_serializer, uses_report_ids};
 /// parameter.
 ///
 /// The valid parameters are `collection`, `usage_page`, `usage`, `usage_min`, `usage_max`,
-/// `unit_exponent`, and `report_id`.
+/// `logical_min`, `logical_max`, `physical_min`, `physical_max`, `unit_exponent`, and `report_id`.
 /// These simply configure parameters that apply to contained items in the report.
 /// Use of the `collection` parameter automatically creates a collection feature for all items
 /// which are contained within it, and other parameters specified in the same collection-spec
@@ -291,6 +291,10 @@ fn compile_descriptor(
 struct DescCompilation {
     logical_minimum: Option<isize>,
     logical_maximum: Option<isize>,
+    physical_minimum: isize,
+    physical_maximum: isize,
+    override_logical_minimum: bool,
+    override_logical_maximum: bool,
     report_size: Option<u16>,
     report_count: Option<u16>,
     processed_fields: Vec<ReportUnaryField>,
@@ -366,7 +370,10 @@ impl DescCompilation {
         item: MainItem,
         quirks: ItemQuirks,
     ) {
-        if self.logical_minimum.is_none() || self.logical_minimum.unwrap() != item.logical_minimum {
+        if !self.override_logical_minimum
+            && (self.logical_minimum.is_none()
+                || self.logical_minimum.unwrap() != item.logical_minimum)
+        {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -377,7 +384,10 @@ impl DescCompilation {
             );
             self.logical_minimum = Some(item.logical_minimum);
         }
-        if self.logical_maximum.is_none() || self.logical_maximum.unwrap() != item.logical_maximum {
+        if !self.override_logical_maximum
+            && (self.logical_maximum.is_none()
+                || self.logical_maximum.unwrap() != item.logical_maximum)
+        {
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -463,6 +473,11 @@ impl DescCompilation {
     ) -> Result<()> {
         // println!("GROUP: {:?}", spec);
 
+        let previous_override_logical_minimum = self.override_logical_minimum;
+        let previous_override_logical_maximum = self.override_logical_maximum;
+        let previous_physical_minimum = self.physical_minimum;
+        let previous_physical_maximum = self.physical_maximum;
+
         if let Some(usage_page) = spec.usage_page {
             self.emit_item(
                 elems,
@@ -524,9 +539,6 @@ impl DescCompilation {
             );
         }
         if let Some(logical_minimum) = spec.logical_min {
-            // Set to 0 to indicate that we've already set the default
-            // See handle_globals
-            self.logical_minimum = Some(0);
             self.emit_item(
                 elems,
                 ItemType::Global.into(),
@@ -535,6 +547,42 @@ impl DescCompilation {
                 false,
                 false,
             );
+            self.logical_minimum = Some(logical_minimum as isize);
+            self.override_logical_minimum = true;
+        }
+        if let Some(logical_maximum) = spec.logical_max {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::LogicalMax.into(),
+                logical_maximum as isize,
+                false,
+                false,
+            );
+            self.logical_maximum = Some(logical_maximum as isize);
+            self.override_logical_maximum = true;
+        }
+        if let Some(physical_minimum) = spec.physical_min {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::PhysicalMin.into(),
+                physical_minimum as isize,
+                false,
+                false,
+            );
+            self.physical_minimum = physical_minimum as isize;
+        }
+        if let Some(physical_maximum) = spec.physical_max {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::PhysicalMax.into(),
+                physical_maximum as isize,
+                false,
+                false,
+            );
+            self.physical_maximum = physical_maximum as isize;
         }
         if let Some(unit_exponent) = spec.unit_exponent {
             self.emit_item(
@@ -560,6 +608,30 @@ impl DescCompilation {
                     self.emit_group(elems, g, fields)?;
                 }
             }
+        }
+
+        self.override_logical_minimum = previous_override_logical_minimum;
+        self.override_logical_maximum = previous_override_logical_maximum;
+
+        if spec.physical_min.is_some() || spec.physical_max.is_some() {
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::PhysicalMin.into(),
+                previous_physical_minimum,
+                false,
+                false,
+            );
+            self.emit_item(
+                elems,
+                ItemType::Global.into(),
+                GlobalItemKind::PhysicalMax.into(),
+                previous_physical_maximum,
+                false,
+                false,
+            );
+            self.physical_minimum = previous_physical_minimum;
+            self.physical_maximum = previous_physical_maximum;
         }
 
         if spec.collection.is_some() {
